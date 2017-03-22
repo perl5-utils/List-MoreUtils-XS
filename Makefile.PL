@@ -45,7 +45,7 @@ inc::Config::AutoConf::LMU->check_produce_loadable_xs_build() or die "Can't prod
 
 # Should we build the XS version?
 my %RUN_DEPS = (
-    'List::MoreUtils' => "0.416",
+    'List::MoreUtils' => "0.417_001",
     'XSLoader'        => "0.22",
 );
 my %BUNDLE_CONFIGURE_DEPS = (
@@ -68,6 +68,29 @@ my %TEST_DEPS = (
     'Test::More' => 0.96,
 );
 my @XS_FILES = qw(XS.xs);
+
+my $conflictMsg = <<EOCM;
+***
+    This version of %s conflicts with
+    the version of module %s (%s) you have installed.
+
+    It's strongly recommended that you update it after
+    installing this version of %s.
+***
+EOCM
+
+my $selfConflictMsg = <<EOSCM;
+***
+    This version of %s conflicts with
+    the version of %s (%s) you have installed.
+
+    It's strongly recommended that you carefully read
+    the Changes file and test your application with
+    this version before finally upgrading.
+
+    See local::lib how to do it easily.
+***
+EOSCM
 
 WriteMakefile1(
     META_MERGE => {
@@ -137,6 +160,32 @@ WriteMakefile1(
     # Otherwise 'cxinc' isn't defined
     ($] < 5.012 ? (DEFINE => '-DPERL_EXT') : (),),
 );
+
+sub CheckConflicts
+{
+    my %params    = @_;
+    my %conflicts = %{ $params{CONFLICTS} };
+    my $found     = 0;
+
+    while (my ($module, $version) = each(%conflicts))
+    {
+        undef $@;
+        eval "require $module";
+        next if $@;
+        my $installed = eval "\$" . $module . "::VERSION";
+        if ($installed le $version)
+        {
+            ++$found;
+            my $warning =
+              (0 == index($module, $params{NAME}, 0))
+              ? sprintf($selfConflictMsg, $params{NAME}, $module, $installed)
+              : sprintf($conflictMsg, $params{NAME}, $module, $installed, $params{NAME});
+            warn $warning;
+        }
+    }
+
+    return !$found;
+}
 
 sub WriteMakefile1
 {    # originally written by Alexandr Ciornii, version 0.21. Added by eumm-upgrade.
