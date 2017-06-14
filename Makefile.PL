@@ -45,7 +45,6 @@ inc::Config::AutoConf::LMU->check_produce_loadable_xs_build() or die "Can't prod
 
 # Should we build the XS version?
 my %RUN_DEPS = (
-    'List::MoreUtils' => "0.417_001",
     'XSLoader'        => "0.22",
 );
 my %BUNDLE_CONFIGURE_DEPS = (
@@ -120,7 +119,7 @@ WriteMakefile1(
                     'Test::Pod::Spelling::CommonMistakes' => 0,
                     'Test::Spelling'                      => 0,
                     'JSON::PP'                            => 0,
-                    'Test::WriteVariants'                 => '0.010',
+                    'Test::WriteVariants'                 => '0.013',
                     %BUNDLE_CONFIGURE_DEPS,
                 },
             },
