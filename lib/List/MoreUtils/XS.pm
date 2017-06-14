@@ -3,10 +3,29 @@ package List::MoreUtils::XS;
 use 5.008_001;
 use strict;
 use warnings;
+use base ('Exporter');
 
-use vars qw{$VERSION @ISA};
+use vars qw{$VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS};
 
-$VERSION = '0.418';
+$VERSION = '0.420_001';
+
+@EXPORT = ();
+@EXPORT_OK = qw(any all none notall one
+          any_u all_u none_u notall_u one_u
+          true false
+          insert_after insert_after_string
+          apply indexes
+          after after_incl before before_incl
+          firstidx lastidx onlyidx
+          firstval lastval onlyval
+          firstres lastres onlyres
+          singleton
+          each_array each_arrayref
+          pairwise natatime
+          mesh uniq
+          minmax part
+          bsearch bsearchidx);
+%EXPORT_TAGS = (all => \@EXPORT_OK);
 
 # Load the XS at compile-time so that redefinition warnings will be
 # thrown correctly if the XS versions of part or indexes loaded
