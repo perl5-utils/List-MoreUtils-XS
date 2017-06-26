@@ -95,15 +95,15 @@ WriteMakefile1(
     META_MERGE => {
         'meta-spec' => {version => 2},
         resources   => {
-            homepage   => 'https://metacpan.org/release/List-MoreUtils',
+            homepage   => 'https://metacpan.org/release/List-MoreUtils-XS',
             repository => {
-                url  => 'https://github.com/perl5-utils/List-MoreUtils.git',
-                web  => 'https://github.com/perl5-utils/List-MoreUtils',
+                url  => 'https://github.com/perl5-utils/List-MoreUtils-XS.git',
+                web  => 'https://github.com/perl5-utils/List-MoreUtils-XS',
                 type => 'git',
             },
             bugtracker => {
-                web    => 'https://rt.cpan.org/Dist/Display.html?Name=List-MoreUtils',
-                mailto => 'bug-List-MoreUtils@rt.cpan.org',
+                web    => 'https://rt.cpan.org/Dist/Display.html?Name=List-MoreUtils-XS',
+                mailto => 'bug-List-MoreUtils-XS@rt.cpan.org',
             },
             license => 'apache_2_0',
         },
@@ -138,7 +138,7 @@ WriteMakefile1(
         },
     },
     NAME         => 'List::MoreUtils::XS',
-    ABSTRACT     => 'Provide the stuff missing in List::Util',
+    ABSTRACT     => 'Provide the stuff missing in List::Util in XS',
     VERSION_FROM => 'lib/List/MoreUtils/XS.pm',
     AUTHOR       => [
         'Tassilo von Parseval <tassilo.von.parseval@rwth-aachen.de>',
