@@ -1571,6 +1571,58 @@ mesh (...)
         XSRETURN(items * (maxidx + 1));
     }
 
+HV *
+listcmp (...)
+    PROTOTYPE: \@\@;\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@
+    CODE:
+    {
+        I32 i;
+        SV *tmp = sv_newmortal();
+        RETVAL = newHV();
+        sv_2mortal (newRV_noinc((SV *)RETVAL));
+
+        for (i = 0; i < items; i++) {
+            AV *av;
+            I32 j;
+            HV *distinct = newHV();
+            sv_2mortal(newRV_noinc((SV*)distinct));
+
+            if(!arraylike(ST(i)))
+               croak_xs_usage(cv,  "\\@\\@;\\@...");
+            av = (AV*)SvRV(ST(i));
+
+            for(j = 0; j <= av_len(av); ++j) {
+                SV **sv = av_fetch(av, j, FALSE);
+                AV *store;
+
+                if(NULL == sv)
+                    continue;
+
+                SvGETMAGIC(*sv);
+                if(SvOK(*sv)) {
+                    SvSetSV_nosteal(tmp, *sv);
+                    if(hv_exists_ent(distinct, tmp, 0))
+                        continue;
+
+                    hv_store_ent(distinct, tmp, &PL_sv_yes, 0);
+
+                    if(hv_exists_ent(RETVAL, *sv, 0)) {
+                        HE *he = hv_fetch_ent(RETVAL, *sv, 1, 0);
+                        store = (AV*)SvRV(HeVAL(he));
+                        av_push(store, newSViv(i));
+                    }
+                    else {
+                        store = newAV();
+                        av_push(store, newSViv(i));
+                        hv_store_ent(RETVAL, tmp, newRV_noinc((SV *)store), 0);
+                    }
+                }
+            }
+        }
+    }
+    OUTPUT:
+        RETVAL
+
 void
 uniq (...)
     PROTOTYPE: @
