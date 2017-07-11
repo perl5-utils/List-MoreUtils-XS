@@ -24,7 +24,8 @@ $VERSION = '0.420_001';
           pairwise natatime
           mesh uniq
           minmax part
-          bsearch bsearchidx);
+          bsearch bsearchidx
+          qsort);
 %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 # Load the XS at compile-time so that redefinition warnings will be
