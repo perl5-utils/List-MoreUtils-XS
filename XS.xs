@@ -168,7 +168,6 @@ in_pad (pTHX_ SV *code)
     CV *cv = sv_2cv(code, &stash, &gv, 0);
     PADLIST *pad_list = (CvPADLIST(cv));
     PADNAMELIST *pad_namelist = PadlistNAMES(pad_list);
-    PADNAME **pad_names = PadnamelistARRAY(pad_namelist);
     int i;
 
     for (i=PadnamelistMAX(pad_namelist); i>=0; --i) {
@@ -1555,7 +1554,7 @@ mesh (...)
 
         for (i = 0; i < items; i++) {
             if(!arraylike(ST(i)))
-               croak_xs_usage(cv,  "\\@;\\@\\@...");
+               croak_xs_usage(cv,  "\\@\\@;\\@...");
             avs[i] = (AV*)SvRV(ST(i));
             if (av_len(avs[i]) > maxidx)
                 maxidx = av_len(avs[i]);
@@ -2009,6 +2008,133 @@ CODE:
 OUTPUT:
     RETVAL
 
+int
+btree_insert(code, item, list)
+    SV *code;
+    SV *item;
+    AV *list;
+PROTOTYPE: &$\@
+CODE:
+{
+    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
+                            therefore we save its value in a fresh variable */
+    if(!codelike(code))
+       croak_xs_usage(cv,  "code, val, list");
+
+    RETVAL = -1;
+
+    if (av_len(list) > 0) {
+        dMULTICALL;
+        HV *stash;
+        GV *gv;
+        ssize_t count = av_len(list) + 1, step, first = 0;
+        int cmprc = -1;
+        SV **btree = AvARRAY(list);
+
+        CV *_cv = sv_2cv(code, &stash, &gv, 0);
+        PUSH_MULTICALL(_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        /* lower_bound algorithm from STL */
+        while (count > 0) {
+            ssize_t it = first;
+            step = count / 2; 
+            it += step;
+
+            GvSV(PL_defgv) = btree[it];
+            MULTICALL;
+            cmprc = SvIV(*PL_stack_sp);
+            if (cmprc < 0) {
+                first = ++it; 
+                count -= step + 1; 
+            }
+            else
+                count = step;
+        }
+
+        POP_MULTICALL;
+
+        SvREFCNT_inc(item);
+        insert_after(aTHX_ (RETVAL = first) - 1, item, list);
+    }
+}
+OUTPUT:
+    RETVAL
+
+void
+btree_remove(code, list)
+    SV *code;
+    AV *list;
+PROTOTYPE: &\@
+CODE:
+{
+    dMULTICALL;
+    HV *stash;
+    GV *gv;
+    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
+                            therefore we save its value in a fresh variable */
+    long i, j;
+    int val = -1;
+
+    if(!codelike(code))
+       croak_xs_usage(cv,  "code, ...");
+
+    if (av_len(list) > 0) {
+        CV *_cv = sv_2cv(code, &stash, &gv, 0);
+        PUSH_MULTICALL(_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        i = 0;
+        j = av_len(list);
+        do {
+            long k = (i + j) / 2;
+
+            if (k > av_len(list))
+                break;
+
+            GvSV(PL_defgv) = *av_fetch(list, k, FALSE);
+            MULTICALL;
+            val = SvIV(*PL_stack_sp);
+
+            if (val == 0) {
+                POP_MULTICALL;
+
+                if(av_len(list) == k) {
+                    ST(0) = sv_2mortal(av_pop(list));
+                    XSRETURN(1);
+                }
+
+                if(0 == k ) {
+                    ST(0) = sv_2mortal(av_shift(list));
+                    XSRETURN(1);
+                }
+
+                ST(0) = av_delete(list, k, 0);
+                for(i = k; i < av_len(list); ++i) {
+                    SV **sv = av_fetch(list, i+1, FALSE);
+                    if(sv) {
+                        SvREFCNT_inc(*sv);
+                        av_store(list, i, *sv);
+                    }
+                }
+                av_delete(list, av_len(list), G_DISCARD);
+                XSRETURN(1);
+            }
+            if (val < 0) {
+                i = k+1;
+            } else {
+                j = k-1;
+            }
+        } while (i <= j);
+        POP_MULTICALL;
+    }
+
+    if (gimme == G_ARRAY)
+        XSRETURN_EMPTY;
+    else
+        XSRETURN_UNDEF;
+}
+
 void
 qsort(code, list)
     SV *code;
@@ -2052,7 +2178,6 @@ CODE:
         SAVESPTR(GvSV(PL_firstgv));
         SAVESPTR(GvSV(PL_secondgv));
 
-        size_t n = items;
         bsd_qsort_r(aTHX_ AvARRAY(list), av_len(list) + 1, multicall_cop);
         POP_MULTICALL;
     }

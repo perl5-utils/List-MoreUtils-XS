@@ -24,7 +24,7 @@ $VERSION = '0.420_001';
           pairwise natatime
           mesh uniq
           minmax part
-          bsearch bsearchidx
+          bsearch bsearchidx btree_insert btree_remove
           qsort);
 %EXPORT_TAGS = (all => \@EXPORT_OK);
 
