@@ -303,7 +303,7 @@ is_like(pTHX_ SV *sv, const char *like)
         ENTER;
         SAVETMPS;
         PUSHMARK(SP);
-        XPUSHs( sv_2mortal( newSVsv( sv ) ) );
+        XPUSHs( sv_mortalcopy( sv ) );
         XPUSHs( sv_2mortal( newSVpv( like, strlen(like) ) ) );
         PUTBACK;
 
@@ -318,7 +318,6 @@ is_like(pTHX_ SV *sv, const char *like)
                 ++likely;
         }
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
     }
@@ -349,6 +348,35 @@ LMUarraylike(pTHX_ SV *array)
 }
 
 #define arraylike(array) LMUarraylike(aTHX_ array)
+
+static I32
+LMUav2flat(pTHX_ I32 ax, AV *args, I32 i, I32 n)
+{
+    dSP;
+    I32 k = 0, j = av_len(args) + 1;
+
+    n += j;
+    EXTEND(SP, n);
+
+    while( --j >= 0 )
+    {
+        SV *sv = av_delete(args, k++, 0);
+        if(arraylike(sv))
+        {
+            AV *av = (AV *)SvRV(sv);
+            I32 o = LMUav2flat(aTHX_ ax, av, i, n - 1);
+            i += o - n + 1;
+            n = o;
+        }
+        else
+        {
+            ST(i) = sv;
+            ++i;
+        }
+    }
+
+    return n;
+}
 
 #if defined(HAVE_BSD_QSORT_R)
 #elif defined(HAVE_LINUX_QSORT_R)
@@ -1542,6 +1570,16 @@ natatime (n, ...)
     }
     OUTPUT:
         RETVAL
+
+void
+arrayify(...)
+CODE:
+{
+    AV *args = av_make(items, &PL_stack_base[ax]);
+    sv_2mortal(newRV_noinc((SV*)args));
+
+    XSRETURN(LMUav2flat(aTHX_ ax, args, 0, 0));
+}
 
 void
 mesh (...)

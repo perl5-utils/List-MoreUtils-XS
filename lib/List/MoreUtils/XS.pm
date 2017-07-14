@@ -22,7 +22,7 @@ $VERSION = '0.420_001';
           singleton
           each_array each_arrayref
           pairwise natatime
-          mesh uniq listcmp
+          arrayify mesh uniq listcmp
           minmax part
           bsearch bsearchidx btree_insert btree_remove
           qsort);
