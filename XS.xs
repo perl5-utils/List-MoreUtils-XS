@@ -252,13 +252,36 @@ in_pad (pTHX_ SV *code)
         POP_MULTICALL;                          \
     }
 
-#define TRUE_JUNCTION   \
-    FOR_EACH(if (SvTRUE(*PL_stack_sp)) ON_TRUE) \
+#define TRUE_JUNCTION                             \
+    FOR_EACH(if (SvTRUE(*PL_stack_sp)) ON_TRUE)   \
     else ON_EMPTY;
 
-#define FALSE_JUNCTION  \
+#define FALSE_JUNCTION                            \
     FOR_EACH(if (!SvTRUE(*PL_stack_sp)) ON_FALSE) \
     else ON_EMPTY;
+
+#define COUNT_ARGS                                    \
+    for (i = 0; i < items; i++) {                     \
+        SvGETMAGIC(args[i]);                          \
+        if(SvOK(args[i])) {                           \
+            HE *he;                                   \
+            SvSetSV_nosteal(tmp, args[i]);            \
+            he = hv_fetch_ent(hv, tmp, 0, 0);         \
+            if (NULL == he) {                         \
+                args[count++] = args[i];              \
+                hv_store_ent(hv, tmp, newSViv(1), 0); \
+            }                                         \
+            else {                                    \
+                SV *v = HeVAL(he);                    \
+                IV how_many = SvIVX(v);               \
+                sv_setiv(v, ++how_many);              \
+            }                                         \
+        }                                             \
+        else if(0 == seen_undef++) {                  \
+            args[count++] = args[i];                  \
+        }                                             \
+    }
+
 
 /* #include "dhash.h" */
 
@@ -1714,81 +1737,119 @@ uniq (...)
 
 void
 singleton (...)
-    PROTOTYPE: @
-    CODE:
-    {
-        I32 i;
-        IV cnt = 0, count = 0, seen_undef = 0;
-        HV *hv = newHV();
-        SV **args = &PL_stack_base[ax];
-        SV *tmp = sv_newmortal();
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    IV cnt = 0, count = 0, seen_undef = 0;
+    HV *hv = newHV();
+    SV **args = &PL_stack_base[ax];
+    SV *tmp = sv_newmortal();
 
-        sv_2mortal(newRV_noinc((SV*)hv));
+    sv_2mortal(newRV_noinc((SV*)hv));
 
-        for (i = 0; i < items; i++) {
-            SvGETMAGIC(args[i]);
-            if(SvOK(args[i])) {
-                HE *he;
-                SvSetSV_nosteal(tmp, args[i]);
-                he = hv_fetch_ent(hv, tmp, 0, 0);
-                if (NULL == he) {
-                    /* ST(count) = sv_2mortal(newSVsv(ST(i))); */
-                    args[count++] = args[i];
-                    hv_store_ent(hv, tmp, newSViv(1), 0);
-                }
-                else {
-                    SV *v = HeVAL(he);
-                    IV how_many = SvIVX(v);
-                    sv_setiv(v, ++how_many);
-                }
-            }
-            else if(0 == seen_undef++) {
-                args[count++] = args[i];
-            }
-        }
+    COUNT_ARGS
 
-        /* don't build return list in scalar context */
-        if (GIMME_V == G_SCALAR) {
-            for (i = 0; i < count; i++) {
-                if(SvOK(args[i])) {
-                    HE *he;
-                        sv_setsv_nomg(tmp, args[i]);
-                    he = hv_fetch_ent(hv, tmp, 0, 0);
-                    if (he) {
-                        SV *v = HeVAL(he);
-                        IV how_many = SvIVX(v);
-                        if( 1 == how_many )
-                            ++cnt;
-                    }
-                }
-                else if(1 == seen_undef) {
-                    ++cnt;
-                }
-            }
-            ST(0) = sv_2mortal(newSViv(cnt));
-            XSRETURN(1);
-        }
-
-        /* list context: populate SP with mortal copies */
+    /* don't build return list in scalar context */
+    if (GIMME_V == G_SCALAR) {
         for (i = 0; i < count; i++) {
             if(SvOK(args[i])) {
                 HE *he;
-                SvSetSV_nosteal(tmp, args[i]);
+                sv_setsv_nomg(tmp, args[i]);
                 he = hv_fetch_ent(hv, tmp, 0, 0);
                 if (he) {
                     SV *v = HeVAL(he);
                     IV how_many = SvIVX(v);
                     if( 1 == how_many )
-                        args[cnt++] = args[i];
+                        ++cnt;
                 }
             }
             else if(1 == seen_undef) {
-                args[cnt++] = args[i];
+                ++cnt;
             }
         }
-
-        XSRETURN(cnt);
+        ST(0) = sv_2mortal(newSViv(cnt));
+        XSRETURN(1);
     }
+
+    /* list context: populate SP with mortal copies */
+    for (i = 0; i < count; i++) {
+        if(SvOK(args[i])) {
+            HE *he;
+            SvSetSV_nosteal(tmp, args[i]);
+            he = hv_fetch_ent(hv, tmp, 0, 0);
+            if (he) {
+                SV *v = HeVAL(he);
+                IV how_many = SvIVX(v);
+                if( 1 == how_many )
+                    args[cnt++] = args[i];
+            }
+        }
+        else if(1 == seen_undef) {
+            args[cnt++] = args[i];
+        }
+    }
+
+    XSRETURN(cnt);
+}
+
+void
+duplicates (...)
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    IV cnt = 0, count = 0, seen_undef = 0;
+    HV *hv = newHV();
+    SV **args = &PL_stack_base[ax];
+    SV *tmp = sv_newmortal();
+
+    sv_2mortal(newRV_noinc((SV*)hv));
+
+    COUNT_ARGS
+
+    /* don't build return list in scalar context */
+    if (GIMME_V == G_SCALAR) {
+        for (i = 0; i < count; i++) {
+            if(SvOK(args[i])) {
+                HE *he;
+                sv_setsv_nomg(tmp, args[i]);
+                he = hv_fetch_ent(hv, tmp, 0, 0);
+                if (he) {
+                    SV *v = HeVAL(he);
+                    IV how_many = SvIVX(v);
+                    if( 1 < how_many )
+                        ++cnt;
+                }
+            }
+            else if(1 < seen_undef) {
+                ++cnt;
+            }
+        }
+        ST(0) = sv_2mortal(newSViv(cnt));
+        XSRETURN(1);
+    }
+
+    /* list context: populate SP with mortal copies */
+    for (i = 0; i < count; i++) {
+        if(SvOK(args[i])) {
+            HE *he;
+            SvSetSV_nosteal(tmp, args[i]);
+            he = hv_fetch_ent(hv, tmp, 0, 0);
+            if (he) {
+                SV *v = HeVAL(he);
+                IV how_many = SvIVX(v);
+                if( 1 < how_many )
+                    args[cnt++] = args[i];
+            }
+        }
+        else if(1 < seen_undef) {
+            args[cnt++] = args[i];
+        }
+    }
+
+    XSRETURN(cnt);
+}
 
 void
 minmax (...)
