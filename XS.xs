@@ -1954,6 +1954,68 @@ minmax (...)
         XSRETURN(2);
     }
 
+
+
+void
+minmaxstr (...)
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    SV *minsv, *maxsv;
+
+    if (!items)
+        XSRETURN_EMPTY;
+
+    if (items == 1) {
+        EXTEND(SP, 1);
+        ST(1) = sv_2mortal(newSVsv(ST(0)));
+        XSRETURN(2);
+    }
+
+    minsv = maxsv = ST(0);
+
+    for (i = 1; i < items; i += 2) {
+        SV *asv = ST(i-1);
+        SV *bsv = ST(i);
+        int cmp = sv_cmp_locale(asv, bsv);
+        if (cmp < 0) {
+            int min_cmp = sv_cmp_locale(minsv, asv);
+            int max_cmp = sv_cmp_locale(maxsv, bsv);
+            if (min_cmp > 0) {
+                minsv = asv;
+            }
+            if (max_cmp < 0) {
+                maxsv = bsv;
+            }
+        } else {
+            int min_cmp = sv_cmp_locale(minsv, bsv);
+            int max_cmp = sv_cmp_locale(maxsv, asv);
+            if (min_cmp > 0) {
+                minsv = bsv;
+            }
+            if (max_cmp < 0) {
+                maxsv = asv;
+            }
+        }
+    }
+
+    if (items & 1) {
+        SV *rsv = ST(items-1);
+        if (sv_cmp_locale(minsv, rsv) > 0) {
+            minsv = rsv;
+        }
+        else if (sv_cmp_locale(maxsv, rsv) < 0) {
+            maxsv = rsv;
+        }
+    }
+
+    ST(0) = minsv;
+    ST(1) = maxsv;
+
+    XSRETURN(2);
+}
+
 void
 part (code, ...)
     SV *code;
