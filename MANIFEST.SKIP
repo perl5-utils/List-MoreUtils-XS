@@ -11,6 +11,7 @@ Makefile.old
 ^MYMETA.yml$
 ^\..*
 ^List-MoreUtils-.*
+^LMUconfig\.h
 \.[co]
 MANIFEST.SKIP
 MYMETA.*

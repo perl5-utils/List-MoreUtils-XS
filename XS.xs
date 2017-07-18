@@ -27,6 +27,8 @@
 #include "multicall.h"
 #include "ppport.h"
 
+#include "LMUconfig.h"
+
 #ifndef aTHX
 #  define aTHX
 #  define pTHX
@@ -574,6 +576,13 @@ loop:   if (nelem < 7) {
                 }
         }
 }
+
+#ifdef HAVE_TIME_H
+# include <time.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 
 #endif
 
@@ -1849,6 +1858,40 @@ CODE:
     }
 
     XSRETURN(cnt);
+}
+
+void
+samples (k, ...)
+  I32 k;
+PROTOTYPE: $@
+CODE:
+{
+    I32 i;
+
+    if( k > (items - 1) )
+        croak("Cannot get %d samples from %d elements", k, items-1);
+
+    /* Initialize Drand01 unless rand() or srand() has already been called */
+    if(!PL_srand_called) {
+#ifdef HAVE_TIME
+        /* using time(NULL) as seed seems to get better random numbers ... */
+        (void)seedDrand01((Rand_seed_t)time(NULL));
+#else
+        (void)seedDrand01((Rand_seed_t)Perl_seed(aTHX));
+#endif
+        PL_srand_called = TRUE;
+    }
+
+    /* optimzed Knuth-Shuffle since we move our stack one item downwards
+       with each exchange */
+    for (i = items ; items - i < k ; ) {
+        I32 index = items - i + 1;
+        I32 swap = index + (I32)(Drand01() * (double)(--i));
+        ST(index-1) = ST(swap);
+        ST(swap) = ST(index);
+    }
+
+    XSRETURN(k);
 }
 
 void

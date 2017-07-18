@@ -6,6 +6,8 @@ Build
 !Build/
 Build.bat
 .last_cover_stats
+List-MoreUtils-XS-*
+LMUconfig.h
 Makefile
 Makefile.old
 MANIFEST
@@ -22,4 +24,3 @@ inc/inc_*
 inc/latest*
 t/pureperl/
 t/xs/
-List-MoreUtils-XS-*

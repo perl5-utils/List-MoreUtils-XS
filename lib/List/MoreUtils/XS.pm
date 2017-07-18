@@ -23,7 +23,7 @@ $VERSION = '0.420_001';
           each_array each_arrayref
           pairwise natatime
           arrayify mesh uniq duplicates listcmp
-          minmax part
+          samples minmax part
           bsearch bsearchidx btree_insert btree_remove
           qsort);
 %EXPORT_TAGS = (all => \@EXPORT_OK);

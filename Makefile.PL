@@ -29,6 +29,12 @@ use ExtUtils::MakeMaker;
 
 use inc::Config::AutoConf::LMU ();
 
+inc::Config::AutoConf::LMU->_set_argv(@ARGV);    # XXX hack because we cannot construct for global use
+inc::Config::AutoConf::LMU->check_produce_loadable_xs_build() or die "Can't produce loadable XS module";
+inc::Config::AutoConf::LMU->check_all_headers(qw(time.h sys/time.h));
+inc::Config::AutoConf::LMU->check_funcs([qw(time)]);
+inc::Config::AutoConf::LMU->write_config_h("LMUconfig.h");
+
 if (-d "Sandbox")
 {
     eval "use Sandbox::Tumble ();";
@@ -39,9 +45,6 @@ if (-d "Sandbox")
     Sandbox::Tumble->tumble(qw(t));
 }
 
-inc::Config::AutoConf::LMU->_set_argv(@ARGV);    # XXX hack because we cannot construct for global use
-
-inc::Config::AutoConf::LMU->check_produce_loadable_xs_build() or die "Can't produce loadable XS module";
 
 # Should we build the XS version?
 my %RUN_DEPS = (
