@@ -1,5 +1,6 @@
 \B\.git\b
 \.gitignore
+bench*
 blib/
 Makefile$
 Makefile.old
@@ -12,7 +13,7 @@ Makefile.old
 ^\..*
 ^List-MoreUtils-.*
 ^LMUconfig\.h
-\.[co]
+\.[cios]
 MANIFEST.SKIP
 MYMETA.*
 \.bak$
