@@ -1245,100 +1245,21 @@ CODE:
 OUTPUT:
     RETVAL
 
-#if 0
 void
-_pairwise (code, ...)
-        SV *code;
-    PROTOTYPE: &\@\@
-    PPCODE:
-    {
-#define av_items(a) (av_len(a)+1)
-
-        int i;
-        AV *avs[2];
-        SV **oldsp;
-
-        int nitems = 0, maxitems = 0;
-
-        if(!codelike(code))
-           croak_xs_usage(cv,  "code, ...");
-
-        /* deref AV's for convenience and
-         * get maximum items */
-        avs[0] = (AV*)SvRV(ST(1));
-        avs[1] = (AV*)SvRV(ST(2));
-        maxitems = av_items(avs[0]);
-        if (av_items(avs[1]) > maxitems)
-            maxitems = av_items(avs[1]);
-
-        if (!PL_firstgv || !PL_secondgv) {
-            SAVESPTR(PL_firstgv);
-            SAVESPTR(PL_secondgv);
-            PL_firstgv = gv_fetchpv("a", TRUE, SVt_PV);
-            PL_secondgv = gv_fetchpv("b", TRUE, SVt_PV);
-        }
-
-        oldsp = PL_stack_base;
-        EXTEND(SP, maxitems);
-        ENTER;
-        for (i = 0; i < maxitems; i++) {
-            int nret;
-            SV **svp = av_fetch(avs[0], i, FALSE);
-            GvSV(PL_firstgv) = svp ? *svp : &PL_sv_undef;
-            svp = av_fetch(avs[1], i, FALSE);
-            GvSV(PL_secondgv) = svp ? *svp : &PL_sv_undef;
-            PUSHMARK(SP);
-            PUTBACK;
-            nret = call_sv(code, G_EVAL|G_ARRAY);
-            if (SvTRUE(ERRSV))
-                croak("%s", SvPV_nolen(ERRSV));
-            SPAGAIN;
-            nitems += nret;
-            while (nret--) {
-                SvREFCNT_inc(*PL_stack_sp++);
-            }
-        }
-        PL_stack_base = oldsp;
-        LEAVE;
-        XSRETURN(nitems);
-    }
-
-#endif
-
-void
-pairwise (code, ...)
-        SV *code;
+pairwise (code, list1, list2)
+    SV *code;
+    AV *list1;
+    AV *list2;
 PROTOTYPE: &\@\@
 PPCODE:
 {
-#define av_items(a) (av_len(a)+1)
-
-    /* This function is not quite as efficient as it ought to be: We call
-     * 'code' multiple times and want to gather its return values all in
-     * one list. However, each call resets the stack pointer so there is no
-     * obvious way to get the return values onto the stack without making
-     * intermediate copies of the pointers.  The above disabled solution
-     * would be more efficient. Unfortunately it doesn't work (and, as of
-     * now, wouldn't deal with 'code' returning more than one value).
-     *
-     * The current solution is a fair trade-off. It only allocates memory
-     * for a list of SV-pointers, as many as there are return values. It
-     * temporarily stores 'code's return values in this list and, when
-     * done, copies them down to SP. */
-
-    int i, j;
-    AV *avs[2];
-    SV **buf, **p;  /* gather return values here and later copy down to SP */
-    int alloc;
-
-    int nitems = 0, maxitems = 0;
-    int d;
+    dMULTICALL;
+    dMULTICALLSVCV;
+    int i, maxitems;
+    AV *rc = newAV();
+    sv_2mortal(newRV_noinc((SV*)rc));
 
     if(!codelike(code))
-       croak_xs_usage(cv,  "code, list, list");
-    if(!arraylike(ST(1)))
-       croak_xs_usage(cv,  "code, list, list");
-    if(!arraylike(ST(2)))
        croak_xs_usage(cv,  "code, list, list");
 
     if (in_pad(aTHX_ code)) {
@@ -1347,11 +1268,11 @@ PPCODE:
 
     /* deref AV's for convenience and
      * get maximum items */
-    avs[0] = (AV*)SvRV(ST(1));
-    avs[1] = (AV*)SvRV(ST(2));
-    maxitems = av_items(avs[0]);
-    if (av_items(avs[1]) > maxitems)
-        maxitems = av_items(avs[1]);
+    maxitems = MAX(av_len(list1),av_len(list2))+1;
+    av_extend(rc, maxitems);
+
+    gimme = G_ARRAY;
+    PUSH_MULTICALL(mc_cv);
 
     if (!PL_firstgv || !PL_secondgv)
     {
@@ -1361,47 +1282,33 @@ PPCODE:
         PL_secondgv = gv_fetchpv("b", TRUE, SVt_PV);
     }
 
-    New(0, buf, alloc = maxitems, SV*);
-
-    ENTER;
-    for (d = 0, i = 0; i < maxitems; i++)
+    for (i = 0; i < maxitems; ++i)
     {
-        int nret;
-        SV **svp = av_fetch(avs[0], i, FALSE);
+        SV **j;
+        SV **svp = av_fetch(list1, i, FALSE);
         GvSV(PL_firstgv) = svp ? *svp : &PL_sv_undef;
-        svp = av_fetch(avs[1], i, FALSE);
+        svp = av_fetch(list2, i, FALSE);
         GvSV(PL_secondgv) = svp ? *svp : &PL_sv_undef;
-        PUSHMARK(SP);
-        PUTBACK;
-        nret = call_sv(code, G_EVAL|G_ARRAY);
-        if (SvTRUE(ERRSV))
-        {
-            Safefree(buf);
-            croak("%s", SvPV_nolen(ERRSV));
-        }
-        SPAGAIN;
-        nitems += nret;
-        if (nitems > alloc)
-        {
-            alloc <<= 2;
-            Renew(buf, alloc, SV*);
-        }
-        for (j = nret-1; j >= 0; j--)
-        {
-            /* POPs would return elements in reverse order */
-            buf[d] = sp[-j];
-            d++;
-        }
-        sp -= nret;
-    }
-    LEAVE;
-    EXTEND(SP, nitems);
-    p = buf;
-    for (i = 0; i < nitems; i++)
-        ST(i) = *p++;
+        MULTICALL;
 
-    Safefree(buf);
-    XSRETURN(nitems);
+        for (j = PL_stack_base; j < PL_stack_sp; ++j)
+            av_push(rc, newSVsv(*(j+1)));
+    }
+
+    POP_MULTICALL;
+
+    EXTEND(SP, AvFILLp(rc) + 1);
+
+    for(i = AvFILLp(rc); i >= 0; --i)
+    {
+        ST(i) = sv_2mortal(AvARRAY(rc)[i]);
+        AvARRAY(rc)[i] = NULL;
+    }
+
+    i = AvFILLp(rc) + 1;
+    AvFILLp(rc) = -1;
+
+    XSRETURN(i);
 }
 
 void
