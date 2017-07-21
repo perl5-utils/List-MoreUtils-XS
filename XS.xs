@@ -1797,15 +1797,11 @@ PROTOTYPE: &@
 CODE:
 {
     dMULTICALL;
+    dMULTICALLSVCV;
     int i;
-    HV *stash;
-    GV *gv;
-    I32 gimme = G_SCALAR;
     SV **args = &PL_stack_base[ax];
-    CV *_cv;
-
-    AV **tmp = NULL;
-    int last = 0;
+    AV *tmp = newAV();
+    sv_2mortal(newRV_noinc((SV*)tmp));
 
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
@@ -1813,44 +1809,48 @@ CODE:
     if (items == 1)
         XSRETURN_EMPTY;
 
-    _cv = sv_2cv(code, &stash, &gv, 0);
-    PUSH_MULTICALL(_cv);
+    PUSH_MULTICALL(mc_cv);
     SAVESPTR(GvSV(PL_defgv));
 
     for(i = 1 ; i < items ; ++i)
     {
-        int idx;
+        IV idx;
+        SV **inner;
+        AV *av;
+
         GvSV(PL_defgv) = args[i];
         MULTICALL;
         idx = SvIV(*PL_stack_sp);
 
-        if (idx < 0 && (idx += last) < 0)
-            croak("Modification of non-creatable array value attempted, subscript %i", idx);
+        if (UNLIKELY(idx < 0 && (idx += (AvFILLp(tmp)+1)) < 0))
+            croak("Modification of non-creatable array value attempted, subscript %ld", idx);
 
-        if (idx >= last)
+        if(UNLIKELY(NULL == (inner = av_fetch(tmp, idx, FALSE))))
         {
-            int oldlast = last;
-            last = idx + 1;
-            Renew(tmp, last, AV*);
-            Zero(tmp + oldlast, last - oldlast, AV*);
+            av = newAV();
+            av_push(av, newSVsv(args[i]));
+            av_store(tmp, idx, newRV_noinc((SV *)av));
         }
-        if (!tmp[idx])
-            tmp[idx] = newAV();
-        av_push(tmp[idx], newSVsv( args[i] ));
+        else
+        {
+            av = (AV*)SvRV(*inner);
+            av_push(av, newSVsv(args[i]));
+        }
     }
     POP_MULTICALL;
 
-    EXTEND(SP, last);
-    for (i = 0; i < last; ++i)
+    EXTEND(SP, AvFILLp(tmp)+1);
+    for(i = AvFILLp(tmp); i >= 0; --i)
     {
-        if (tmp[i])
-            ST(i) = sv_2mortal(newRV_noinc((SV*)tmp[i]));
-        else
-            ST(i) = &PL_sv_undef;
+        SV *v = AvARRAY(tmp)[i];
+        ST(i) = v && is_array(v) ? sv_2mortal(v) : &PL_sv_undef;
+        AvARRAY(tmp)[i] = NULL;
     }
 
-    Safefree(tmp);
-    XSRETURN(last);
+    i = AvFILLp(tmp) + 1;
+    AvFILLp(tmp) = -1;
+
+    XSRETURN(i);
 }
 
 #if 0
