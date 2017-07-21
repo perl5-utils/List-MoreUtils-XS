@@ -1144,41 +1144,44 @@ indexes (code, ...)
 PROTOTYPE: &@
 CODE:
 {
-    dMULTICALL;
-    int i, j;
-    HV *stash;
-    GV *gv;
-    I32 gimme = G_SCALAR;
-    SV **args = &PL_stack_base[ax];
-    CV *_cv;
-
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
 
-    if (items <= 1)
-        XSRETURN_EMPTY;
+    if (items > 1) {
+        dMULTICALL;
+        dMULTICALLSVCV;
+        int i;
+        SV **args = &PL_stack_base[ax];
+        AV *rc = newAV();
 
-    _cv = sv_2cv(code, &stash, &gv, 0);
-    PUSH_MULTICALL(_cv);
-    SAVESPTR(GvSV(PL_defgv));
+        sv_2mortal(newRV_noinc((SV*)rc));
+        av_extend(rc, items-1);
 
-    for (i = 1, j = 0; i < items; i++)
-    {
-        GvSV(PL_defgv) = args[i];
-        MULTICALL;
-        if (SvTRUE(*PL_stack_sp))
-            /* POP_MULTICALL can free mortal temporaries, so we defer
-             * mortalising the returned values till after that's been
-             * done */
-            args[j++] = newSViv(i-1);
+        PUSH_MULTICALL(mc_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        for(i = 1 ; i < items ; ++i)
+        {
+            GvSV(PL_defgv) = args[i];
+            MULTICALL;
+            if (SvTRUE(*PL_stack_sp))
+                av_push(rc, newSViv(i-1));
+        }
+        POP_MULTICALL;
+
+        for(i = av_len(rc); i >= 0; --i)
+        {
+            ST(i) = sv_2mortal(AvARRAY(rc)[i]);
+            AvARRAY(rc)[i] = NULL;
+        }
+
+        i = AvFILLp(rc) + 1;
+        AvFILLp(rc) = -1;
+
+        XSRETURN(i);
     }
 
-    POP_MULTICALL;
-
-    for (i = 0; i < j; i++)
-        sv_2mortal(args[i]);
-
-    XSRETURN(j);
+    XSRETURN_EMPTY;
 }
 
 void
