@@ -20,11 +20,14 @@
  * Perl 5 you may have available.
  */
 
+#define NEED_gv_fetchpvn_flags
 #define PERL_NO_GET_CONTEXT
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
 #include "multicall.h"
+
 #include "ppport.h"
 
 #include "LMUconfig.h"
@@ -32,6 +35,37 @@
 #ifndef aTHX
 #  define aTHX
 #  define pTHX
+#endif
+
+#ifndef croak_xs_usage
+
+# ifndef PERL_ARGS_ASSERT_CROAK_XS_USAGE
+#  define PERL_ARGS_ASSERT_CROAK_XS_USAGE assert(cv); assert(params)
+# endif
+
+static void
+S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
+{
+    const GV *const gv = CvGV(cv);
+
+    PERL_ARGS_ASSERT_CROAK_XS_USAGE;
+
+    if (gv) {
+        const char *const gvname = GvNAME(gv);
+        const HV *const stash = GvSTASH(gv);
+        const char *const hvname = stash ? HvNAME(stash) : NULL;
+
+        if (hvname)
+            Perl_croak_nocontext("Usage: %s::%s(%s)", hvname, gvname, params);
+        else
+            Perl_croak_nocontext("Usage: %s(%s)", gvname, params);
+    } else {
+        /* Pants. I don't think that it should be possible to get here. */
+        Perl_croak_nocontext("Usage: CODE(0x%"UVxf")(%s)", PTR2UV(cv), params);
+    }
+}
+
+# define croak_xs_usage(a,b)     S_croak_xs_usage(aTHX_ a,b)
 #endif
 
 #ifdef SVf_IVisUV
@@ -53,6 +87,15 @@
 
 #ifndef MUTABLE_GV
 # define MUTABLE_GV(a) (GV *)(a)
+#endif
+#ifndef LIKELY
+# define LIKELY(x) (x)
+#endif
+#ifndef UNLIKELY
+# define UNLIKELY(x) (x)
+#endif
+#ifndef GV_NOTQUAL
+# define GV_NOTQUAL 0
 #endif
 
 /* compare left and right SVs. Returns:
@@ -1291,12 +1334,13 @@ PPCODE:
         GvSV(PL_secondgv) = svp ? *svp : &PL_sv_undef;
         MULTICALL;
 
-        for (j = PL_stack_base; j < PL_stack_sp; ++j)
-            av_push(rc, newSVsv(*(j+1)));
+        for (j = PL_stack_base+1; j <= PL_stack_sp; ++j)
+            av_push(rc, newSVsv(*j));
     }
 
     POP_MULTICALL;
 
+    SPAGAIN;
     EXTEND(SP, AvFILLp(rc) + 1);
 
     for(i = AvFILLp(rc); i >= 0; --i)
@@ -2164,6 +2208,9 @@ CODE:
                     }
                 }
                 av_delete(list, av_len(list), G_DISCARD);
+#if PERL_VERSION_LE(5,8,5)
+                sv_2mortal(ST(0));
+#endif
                 XSRETURN(1);
             }
             if (val < 0)
