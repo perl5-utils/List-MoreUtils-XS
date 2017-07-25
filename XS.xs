@@ -443,33 +443,27 @@ LMUarraylike(pTHX_ SV *array)
 
 #define arraylike(array) LMUarraylike(aTHX_ array)
 
-static I32
-LMUav2flat(pTHX_ I32 ax, AV *args, I32 i, I32 n)
+static void
+LMUav2flat(pTHX_ AV *tgt, AV *args)
 {
-    dSP;
     I32 k = 0, j = av_len(args) + 1;
 
-    n += j;
-    EXTEND(SP, n);
+    av_extend(tgt, AvFILLp(tgt) + j);
 
     while( --j >= 0 )
     {
-        SV *sv = av_delete(args, k++, 0);
+        SV *sv = *av_fetch(args, k++, FALSE);
         if(arraylike(sv))
         {
             AV *av = (AV *)SvRV(sv);
-            I32 o = LMUav2flat(aTHX_ ax, av, i, n - 1);
-            i += o - n + 1;
-            n = o;
+            LMUav2flat(aTHX_ tgt, av);
         }
         else
         {
-            ST(i) = sv;
-            ++i;
+            // av_push(tgt, newSVsv(sv));
+            av_push(tgt, SvREFCNT_inc(sv));
         }
     }
-
-    return n;
 }
 
 /*-
@@ -1417,10 +1411,24 @@ void
 arrayify(...)
 CODE:
 {
+    I32 i;
+    AV *rc = newAV();
     AV *args = av_make(items, &PL_stack_base[ax]);
-    sv_2mortal(newRV_noinc((SV*)args));
+    sv_2mortal(newRV_noinc((SV *)rc));
+    sv_2mortal(newRV_noinc((SV *)args));
 
-    XSRETURN(LMUav2flat(aTHX_ ax, args, 0, 0));
+    LMUav2flat(aTHX_ rc, args);
+
+    for(i = AvFILLp(rc); i >= 0; --i)
+    {
+        ST(i) = sv_2mortal(AvARRAY(rc)[i]);
+        AvARRAY(rc)[i] = NULL;
+    }
+
+    i = AvFILLp(rc) + 1;
+    AvFILLp(rc) = -1;
+
+    XSRETURN(i);
 }
 
 void
