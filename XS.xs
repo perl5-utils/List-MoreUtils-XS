@@ -2097,7 +2097,7 @@ OUTPUT:
     RETVAL
 
 int
-btree_insert(code, item, list)
+binsert(code, item, list)
     SV *code;
     SV *item;
     AV *list;
@@ -2153,7 +2153,7 @@ OUTPUT:
     RETVAL
 
 void
-btree_remove(code, list)
+bremove(code, list)
     SV *code;
     AV *list;
 PROTOTYPE: &\@
