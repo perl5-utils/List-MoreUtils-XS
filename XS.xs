@@ -2179,6 +2179,44 @@ CODE:
 OUTPUT:
     RETVAL
 
+void
+equal_range (code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    if(!codelike(code))
+       croak_xs_usage(cv,  "code, ...");
+
+    if (items > 1)
+    {
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = items - 1, first = 1;
+        ssize_t lb;
+        int cmprc = -1;
+        SV **args = &PL_stack_base[ax];
+
+        PUSH_MULTICALL(mc_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        LOWER_BOUND(args[it])
+        lb = --first;
+
+        count = items - 1, first = 1;
+        UPPER_BOUND(args[it])
+
+        POP_MULTICALL;
+
+        EXTEND(SP, 2);
+        ST(0) = sv_2mortal(newSViv(lb));
+        ST(1) = sv_2mortal(newSViv(--first));
+        XSRETURN(2);
+    }
+
+    XSRETURN_EMPTY;
+}
+
 int
 binsert(code, item, list)
     SV *code;
