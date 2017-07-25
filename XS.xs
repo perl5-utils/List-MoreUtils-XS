@@ -2054,7 +2054,8 @@ CODE:
 
         LOWER_BOUND_QUICK(args[it])
 
-        if(cmprc < 0) {
+        if(cmprc < 0 && first < items)
+        {
             GvSV(PL_defgv) = args[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
@@ -2100,7 +2101,8 @@ CODE:
 
         LOWER_BOUND_QUICK(args[it])
 
-        if(cmprc < 0) {
+        if(cmprc < 0 && first < items)
+        {
             GvSV(PL_defgv) = args[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
@@ -2276,7 +2278,8 @@ CODE:
 
         LOWER_BOUND_QUICK(btree[it])
 
-        if(cmprc < 0) {
+        if(cmprc < 0 && first < items)
+        {
             GvSV(PL_defgv) = btree[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
