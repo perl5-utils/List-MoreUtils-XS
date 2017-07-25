@@ -397,7 +397,7 @@ is_like(pTHX_ SV *sv, const char *like)
         ENTER;
         SAVETMPS;
         PUSHMARK(SP);
-        XPUSHs( sv_mortalcopy( sv ) );
+        XPUSHs( sv_2mortal( newSVsv( sv ) ) );
         XPUSHs( sv_2mortal( newSVpv( like, strlen(like) ) ) );
         PUTBACK;
 
