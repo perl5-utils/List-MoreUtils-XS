@@ -666,6 +666,44 @@ loop:
 # include <sys/time.h>
 #endif
 
+/* lower_bound algorithm from STL - see http://en.cppreference.com/w/cpp/algorithm/lower_bound */
+#define LOWER_BOUND(at)               \
+    while (count > 0) {               \
+        ssize_t step = count / 2;     \
+        ssize_t it = first + step;    \
+                                      \
+        GvSV(PL_defgv) = at;          \
+        MULTICALL;                    \
+        cmprc = SvIV(*PL_stack_sp);   \
+        if (cmprc < 0) {              \
+            first = ++it;             \
+            count -= step + 1;        \
+        }                             \
+        else                          \
+            count = step;             \
+    }
+
+#define LOWER_BOUND_QUICK(at)         \
+    while (count > 0) {               \
+        ssize_t step = count / 2;     \
+        ssize_t it = first + step;    \
+                                      \
+        GvSV(PL_defgv) = at;          \
+        MULTICALL;                    \
+        cmprc = SvIV(*PL_stack_sp);   \
+        if(UNLIKELY(0 == cmprc)) {    \
+            first = it;               \
+            break;                    \
+        }                             \
+        if (cmprc < 0) {              \
+            first = ++it;             \
+            count -= step + 1;        \
+        }                             \
+        else                          \
+            count = step;             \
+    }
+
+
 MODULE = List::MoreUtils::XS_ea             PACKAGE = List::MoreUtils::XS_ea
 
 void
@@ -1976,69 +2014,50 @@ CODE:
 
 #endif
 
-SV *
+void
 bsearch (code, ...)
     SV *code;
 PROTOTYPE: &@
 CODE:
 {
-    dMULTICALL;
-    HV *stash;
-    GV *gv;
-    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
-                            therefore we save its value in a fresh variable */
-    SV **args = &PL_stack_base[ax];
-
-    long i, j;
-    int val = -1;
-
+    I32 ret_gimme = GIMME_V;
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
 
     if (items > 1)
     {
-        CV *_cv = sv_2cv(code, &stash, &gv, 0);
-        PUSH_MULTICALL(_cv);
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = items - 1, first = 1;
+        int cmprc = -1;
+        SV **args = &PL_stack_base[ax];
+
+        PUSH_MULTICALL(mc_cv);
         SAVESPTR(GvSV(PL_defgv));
 
-        i = 0;
-        j = items - 1;
-        do
-        {
-            long k = (i + j) / 2;
+        LOWER_BOUND_QUICK(args[it])
 
-            if (k >= items-1)
-                break;
-
-            GvSV(PL_defgv) = args[1+k];
+        if(cmprc < 0) {
+            GvSV(PL_defgv) = args[first];
             MULTICALL;
-            val = SvIV(*PL_stack_sp);
+            cmprc = SvIV(*PL_stack_sp);
+        }
 
-            if (val == 0)
-            {
-                POP_MULTICALL;
-                if (gimme != G_ARRAY)
-                    XSRETURN_YES;
-                SvREFCNT_inc(RETVAL = args[1+k]);
-                goto yes;
-            }
-            if (val < 0)
-                i = k+1;
-            else
-                j = k-1;
-        } while (i <= j);
         POP_MULTICALL;
+
+        if(0 == cmprc)
+        {
+            if (ret_gimme != G_ARRAY)
+                XSRETURN_YES;
+            ST(0) = args[first];
+            XSRETURN(1);
+        }
     }
 
-    if (gimme == G_ARRAY)
+    if(ret_gimme == G_ARRAY)
         XSRETURN_EMPTY;
-    else
-        XSRETURN_UNDEF;
-yes:
-    ;
+    XSRETURN_UNDEF;
 }
-OUTPUT:
-    RETVAL
 
 int
 bsearchidx (code, ...)
@@ -2046,52 +2065,67 @@ bsearchidx (code, ...)
 PROTOTYPE: &@
 CODE:
 {
-    dMULTICALL;
-    HV *stash;
-    GV *gv;
-    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
-                            therefore we save its value in a fresh variable */
-    SV **args = &PL_stack_base[ax];
-
-    long i, j;
-    int val = -1;
-
+    I32 ret_gimme = GIMME_V;
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
 
     RETVAL = -1;
+    if (items > 1)
+    {
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = items - 1, first = 1;
+        int cmprc = -1;
+        SV **args = &PL_stack_base[ax];
+
+        PUSH_MULTICALL(mc_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        LOWER_BOUND_QUICK(args[it])
+
+        if(cmprc < 0) {
+            GvSV(PL_defgv) = args[first];
+            MULTICALL;
+            cmprc = SvIV(*PL_stack_sp);
+        }
+
+        POP_MULTICALL;
+
+        if(0 == cmprc)
+            RETVAL = --first;
+    }
+}
+OUTPUT:
+    RETVAL
+
+int
+lower_bound (code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    if(!codelike(code))
+       croak_xs_usage(cv,  "code, ...");
 
     if (items > 1)
     {
-        CV *_cv = sv_2cv(code, &stash, &gv, 0);
-        PUSH_MULTICALL(_cv);
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = items - 1, first = 1;
+        int cmprc = -1;
+        SV **args = &PL_stack_base[ax];
+
+        PUSH_MULTICALL(mc_cv);
         SAVESPTR(GvSV(PL_defgv));
 
-        i = 0;
-        j = items - 1;
-        do
-        {
-            long k = (i + j) / 2;
+        LOWER_BOUND(args[it])
 
-            if (k >= items-1)
-                break;
-
-            GvSV(PL_defgv) = args[1+k];
-            MULTICALL;
-            val = SvIV(*PL_stack_sp);
-
-            if (val == 0)
-            {
-                RETVAL = k;
-                break;
-            }
-            if (val < 0)
-                i = k+1;
-            else
-                j = k-1;
-        } while (i <= j);
         POP_MULTICALL;
+
+        RETVAL = --first;
     }
+    else
+        RETVAL = -1;
 }
 OUTPUT:
     RETVAL
@@ -2104,44 +2138,23 @@ binsert(code, item, list)
 PROTOTYPE: &$\@
 CODE:
 {
-    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
-                            therefore we save its value in a fresh variable */
     if(!codelike(code))
        croak_xs_usage(cv,  "code, val, list");
 
     RETVAL = -1;
 
-    if (av_len(list) > 0)
+    if (AvFILLp(list) > 0)
     {
         dMULTICALL;
-        HV *stash;
-        GV *gv;
-        ssize_t count = av_len(list) + 1, step, first = 0;
+        dMULTICALLSVCV;
+        ssize_t count = AvFILLp(list) + 1, first = 0;
         int cmprc = -1;
         SV **btree = AvARRAY(list);
 
-        CV *_cv = sv_2cv(code, &stash, &gv, 0);
-        PUSH_MULTICALL(_cv);
+        PUSH_MULTICALL(mc_cv);
         SAVESPTR(GvSV(PL_defgv));
 
-        /* lower_bound algorithm from STL */
-        while (count > 0)
-        {
-            ssize_t it = first;
-            step = count / 2; 
-            it += step;
-
-            GvSV(PL_defgv) = btree[it];
-            MULTICALL;
-            cmprc = SvIV(*PL_stack_sp);
-            if (cmprc < 0)
-            {
-                first = ++it; 
-                count -= step + 1; 
-            }
-            else
-                count = step;
-        }
+        LOWER_BOUND(btree[it])
 
         POP_MULTICALL;
 
@@ -2159,77 +2172,62 @@ bremove(code, list)
 PROTOTYPE: &\@
 CODE:
 {
-    dMULTICALL;
-    HV *stash;
-    GV *gv;
-    I32 gimme = GIMME_V; /* perl-5.5.4 bus-errors out later when using GIMME
-                            therefore we save its value in a fresh variable */
-    long i, j;
-    int val = -1;
-
+    I32 ret_gimme = GIMME_V;
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
 
-    if (av_len(list) > 0)
+    if (AvFILLp(list) > 0)
     {
-        CV *_cv = sv_2cv(code, &stash, &gv, 0);
-        PUSH_MULTICALL(_cv);
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = AvFILLp(list) + 1, first = 0;
+        int cmprc = -1;
+        SV **btree = AvARRAY(list);
+
+        PUSH_MULTICALL(mc_cv);
         SAVESPTR(GvSV(PL_defgv));
 
-        i = 0;
-        j = av_len(list);
-        do
-        {
-            long k = (i + j) / 2;
+        LOWER_BOUND_QUICK(btree[it])
 
-            if (k > av_len(list))
-                break;
-
-            GvSV(PL_defgv) = *av_fetch(list, k, FALSE);
+        if(cmprc < 0) {
+            GvSV(PL_defgv) = btree[first];
             MULTICALL;
-            val = SvIV(*PL_stack_sp);
+            cmprc = SvIV(*PL_stack_sp);
+        }
 
-            if (val == 0)
+        POP_MULTICALL;
+
+        if(0 == cmprc)
+        {
+            if(AvFILLp(list) == first)
             {
-                POP_MULTICALL;
-
-                if(av_len(list) == k)
-                {
-                    ST(0) = sv_2mortal(av_pop(list));
-                    XSRETURN(1);
-                }
-
-                if(0 == k )
-                {
-                    ST(0) = sv_2mortal(av_shift(list));
-                    XSRETURN(1);
-                }
-
-                ST(0) = av_delete(list, k, 0);
-                for(i = k; i < av_len(list); ++i)
-                {
-                    SV **sv = av_fetch(list, i+1, FALSE);
-                    if(sv)
-                    {
-                        SvREFCNT_inc(*sv);
-                        av_store(list, i, *sv);
-                    }
-                }
-                av_delete(list, av_len(list), G_DISCARD);
-#if PERL_VERSION_LE(5,8,5)
-                sv_2mortal(ST(0));
-#endif
+                ST(0) = sv_2mortal(av_pop(list));
                 XSRETURN(1);
             }
-            if (val < 0)
-                i = k+1;
-            else
-                j = k-1;
-        } while (i <= j);
-        POP_MULTICALL;
+
+            if(0 == first)
+            {
+                ST(0) = sv_2mortal(av_shift(list));
+                XSRETURN(1);
+            }
+
+            ST(0) = av_delete(list, first, 0);
+            count = AvFILLp(list);
+            while(first < count)
+            {
+                btree[first] = btree[first+1];
+                ++first;
+            }
+            SvREFCNT_inc(btree[count]);
+            av_delete(list, count, G_DISCARD);
+#if PERL_VERSION_LE(5,8,5)
+            sv_2mortal(ST(0));
+#endif
+            XSRETURN(1);
+        }
     }
 
-    if (gimme == G_ARRAY)
+    if (ret_gimme == G_ARRAY)
         XSRETURN_EMPTY;
     else
         XSRETURN_UNDEF;
