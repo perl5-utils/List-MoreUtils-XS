@@ -46,8 +46,27 @@ List::MoreUtils::XS - Provide compiled List::MoreUtils functions
 
 =head1 SYNOPSIS
 
-  use List::Moreutils::XS;
-  use List::MoreUtils ...;
+  use List::Moreutils::XS ();
+  use List::MoreUtils ':all';
+
+  my @procs = get_process_stats->fetchall_array;
+  # sort by ppid, then pid
+  qsort { $a->[3] <=> $b->[3] or $a->[2] <=> $b->[2] } @procs;
+  while( @procs ) {
+      my $proc = shift @procs;
+      my @children = equal_range { $_->[3] <=> $proc->[2] } @procs;
+  }
+
+  my @left = qw(this is a test);
+  my @right = qw(this is also a test);
+  my %rlinfo = listcmp @left, @right;
+
+  # on unsorted
+  my $i = firstidx { $_ eq 'yeah' } @foo;
+  # on sorted - always first, but might not be 'yeah'
+  my $j = lower_bound { $_ cmp 'yeah' } @bar;
+  # on sorted - any of occurances, is surely 'yeah'
+  my $k = bsearchidx { $_ cmp 'yeah' } @bar;
 
 =head1 SEE ALSO
 

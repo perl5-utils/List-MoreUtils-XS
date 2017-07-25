@@ -1517,15 +1517,15 @@ CODE:
     XSRETURN(items * (maxidx + 1));
 }
 
-HV *
+void
 listcmp (...)
 PROTOTYPE: \@\@;\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@
 CODE:
 {
     I32 i;
     SV *tmp = sv_newmortal();
-    RETVAL = newHV();
-    sv_2mortal (newRV_noinc((SV *)RETVAL));
+    HV *rc = newHV();
+    SV *ret = sv_2mortal (newRV_noinc((SV *)rc));
 
     for (i = 0; i < items; i++)
     {
@@ -1555,9 +1555,9 @@ CODE:
 
                 hv_store_ent(distinct, tmp, &PL_sv_yes, 0);
 
-                if(hv_exists_ent(RETVAL, *sv, 0))
+                if(hv_exists_ent(rc, *sv, 0))
                 {
-                    HE *he = hv_fetch_ent(RETVAL, *sv, 1, 0);
+                    HE *he = hv_fetch_ent(rc, *sv, 1, 0);
                     store = (AV*)SvRV(HeVAL(he));
                     av_push(store, newSViv(i));
                 }
@@ -1565,14 +1565,33 @@ CODE:
                 {
                     store = newAV();
                     av_push(store, newSViv(i));
-                    hv_store_ent(RETVAL, tmp, newRV_noinc((SV *)store), 0);
+                    hv_store_ent(rc, tmp, newRV_noinc((SV *)store), 0);
                 }
             }
         }
     }
+
+    i = HvUSEDKEYS(rc);
+    EXTEND(SP, i * 2);
+
+    i = 0;
+    hv_iterinit(rc);
+    for(;;)
+    {
+        HE *he = hv_iternext(rc);
+        SV *key, *val;
+        if(NULL == he)
+            break;
+
+        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+            continue;
+
+        ST(i++) = key;
+        ST(i++) = val;
+    }
+
+    XSRETURN(i);
 }
-OUTPUT:
-    RETVAL
 
 void
 uniq (...)
