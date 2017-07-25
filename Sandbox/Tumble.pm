@@ -38,14 +38,17 @@ use warnings;
 sub provider
 {
     my ( $self, $path, $context, $tests, $variants ) = @_;
+    my $mod_lmu = $context->new_module_use( 'List::MoreUtils::XS' => [':all'] );
     my $mod_ctx = $context->new_module_use( lib => [ File::Spec->catdir(qw(t lib)) ] );
+    my $strict = $context->new_module_use( strict => [qw(subs vars refs)] );
+    my $warnings = $context->new_module_use( warnings => ['all'] );
 
     # statically generate both at dist authoring stage and decide about tests to run at configure stage
     $variants->{xs} = $context->new(
+        $mod_lmu,
         $mod_ctx,
-        $context->new_module_use(
-            'List::MoreUtils::XS' => [':all'],
-        )
+        $warnings,
+        $strict,
     );
 }
 
