@@ -1120,7 +1120,7 @@ CODE:
     for (i = 0; i <= len ; i++)
     {
         SV **sv = av_fetch(av, i, FALSE);
-        if(0 == sv_cmp_locale(string, *sv))
+        if((SvFLAGS(*sv) & (SVf_OK & ~SVf_ROK)) && (0 == sv_cmp_locale(string, *sv)))
         {
             RETVAL = 1;
             break;
