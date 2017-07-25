@@ -24,7 +24,7 @@ $VERSION = '0.420_001';
           pairwise natatime
           arrayify mesh uniq duplicates listcmp
           samples minmax minmaxstr part
-          bsearch bsearchidx binsert bremove lower_bound
+          bsearch bsearchidx binsert bremove lower_bound upper_bound
           qsort);
 %EXPORT_TAGS = (all => \@EXPORT_OK);
 

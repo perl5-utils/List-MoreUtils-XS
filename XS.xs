@@ -703,6 +703,23 @@ loop:
             count = step;             \
     }
 
+/* upper_bound algorithm from STL - see http://en.cppreference.com/w/cpp/algorithm/upper_bound */
+#define UPPER_BOUND(at)                 \
+    while (count > 0) {                 \
+        ssize_t step = count / 2;       \
+        ssize_t it = first + step;      \
+                                        \
+        GvSV(PL_defgv) = at;            \
+        MULTICALL;                      \
+        cmprc = 0 - SvIV(*PL_stack_sp); \
+        if (cmprc >= 0) {               \
+            first = ++it;               \
+            count -= step + 1;          \
+        }                               \
+        else                            \
+            count = step;               \
+    }
+
 
 MODULE = List::MoreUtils::XS_ea             PACKAGE = List::MoreUtils::XS_ea
 
@@ -2119,6 +2136,38 @@ CODE:
         SAVESPTR(GvSV(PL_defgv));
 
         LOWER_BOUND(args[it])
+
+        POP_MULTICALL;
+
+        RETVAL = --first;
+    }
+    else
+        RETVAL = -1;
+}
+OUTPUT:
+    RETVAL
+
+int
+upper_bound (code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    if(!codelike(code))
+       croak_xs_usage(cv,  "code, ...");
+
+    if (items > 1)
+    {
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t count = items - 1, first = 1;
+        int cmprc = -1;
+        SV **args = &PL_stack_base[ax];
+
+        PUSH_MULTICALL(mc_cv);
+        SAVESPTR(GvSV(PL_defgv));
+
+        UPPER_BOUND(args[it])
 
         POP_MULTICALL;
 
