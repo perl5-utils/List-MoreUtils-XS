@@ -348,6 +348,29 @@ in_pad (pTHX_ SV *code)
         }                                             \
     }
 
+#define COUNT_ARGS_MAX                                \
+    for (i = 0; i < items; i++) {                     \
+        SvGETMAGIC(args[i]);                          \
+        if(SvOK(args[i])) {                           \
+            HE *he;                                   \
+            SvSetSV_nosteal(tmp, args[i]);            \
+            he = hv_fetch_ent(hv, tmp, 0, 0);         \
+            if (NULL == he) {                         \
+                args[count++] = args[i];              \
+                hv_store_ent(hv, tmp, newSViv(1), 0); \
+            }                                         \
+            else {                                    \
+                SV *v = HeVAL(he);                    \
+                IV how_many = SvIVX(v);               \
+                if(max < ++how_many) max = how_many;  \
+                sv_setiv(v, how_many);                \
+            }                                         \
+        }                                             \
+        else if(0 == seen_undef++) {                  \
+            args[count++] = args[i];                  \
+        }                                             \
+    }
+
 
 /* #include "dhash.h" */
 
@@ -1811,6 +1834,73 @@ CODE:
     }
 
     XSRETURN(i);
+}
+
+void
+occurances (...)
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    IV count = 0, seen_undef = 0, max = items > 0 ? 1 : 0;
+    HV *hv = newHV();
+    SV **args = &PL_stack_base[ax];
+    SV *tmp = sv_newmortal();
+
+    sv_2mortal(newRV_noinc((SV*)hv));
+
+    COUNT_ARGS_MAX
+
+    /* don't build return list in scalar context */
+    if (GIMME_V == G_SCALAR)
+    {
+        ST(0) = sv_2mortal(newSViv(i));
+        XSRETURN(1);
+    }
+
+    EXTEND(SP, max + 1);
+    for(i = 0; i <= max; ++i)
+        ST(i) = &PL_sv_undef;
+
+    hv_iterinit(hv);
+    for(;;)
+    {
+        HE *he = hv_iternext(hv);
+        SV *key, *val;
+        AV *store;
+        if(NULL == he)
+            break;
+
+        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+            continue;
+
+        i = SvIVX(val);
+        if(ST(i) == &PL_sv_undef)
+        {
+            store = newAV();
+            ST(i) = sv_2mortal(newRV_noinc((SV *)store));
+        }
+        else
+            store = (AV *)SvRV(ST(i));
+        av_push(store, newSVsv(key));
+    }
+
+    if(seen_undef)
+    {
+        AV *store;
+        if(ST(seen_undef) == &PL_sv_undef)
+        {
+            store = newAV();
+            ST(seen_undef) = sv_2mortal(newRV_noinc((SV *)store));
+        }
+        else
+        {
+            store = (AV *)SvRV(ST(seen_undef));
+        }
+        av_push(store, &PL_sv_undef);
+    }
+
+    XSRETURN(max+1);
 }
 
 void
