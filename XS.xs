@@ -1761,6 +1761,59 @@ CODE:
 }
 
 void
+frequency (...)
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    IV count = 0, seen_undef = 0;
+    HV *hv = newHV();
+    SV **args = &PL_stack_base[ax];
+    SV *tmp = sv_newmortal();
+
+    sv_2mortal(newRV_noinc((SV*)hv));
+
+    COUNT_ARGS
+
+    i = HvUSEDKEYS(hv);
+    if(seen_undef)
+        ++i;
+
+    /* don't build return list in scalar context */
+    if (GIMME_V == G_SCALAR)
+    {
+        ST(0) = sv_2mortal(newSViv(i));
+        XSRETURN(1);
+    }
+
+    EXTEND(SP, i * 2);
+
+    i = 0;
+    hv_iterinit(hv);
+    for(;;)
+    {
+        HE *he = hv_iternext(hv);
+        SV *key, *val;
+        if(NULL == he)
+            break;
+
+        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+            continue;
+
+        ST(i++) = key;
+        ST(i++) = val;
+    }
+
+    if(seen_undef)
+    {
+        ST(i++) = sv_2mortal(newRV(newSVsv(&PL_sv_undef)));
+        ST(i++) = sv_2mortal(newSViv(seen_undef));;
+    }
+
+    XSRETURN(i);
+}
+
+void
 samples (k, ...)
   I32 k;
 PROTOTYPE: $@

@@ -19,10 +19,10 @@ $VERSION = '0.420_001';
           firstidx lastidx onlyidx
           firstval lastval onlyval
           firstres lastres onlyres
-          singleton
+          singleton duplicates frequency
           each_array each_arrayref
           pairwise natatime
-          arrayify mesh uniq duplicates listcmp
+          arrayify mesh uniq listcmp
           samples minmax minmaxstr part
           bsearch bsearchidx binsert bremove lower_bound upper_bound equal_range
           qsort);
