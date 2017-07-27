@@ -1904,6 +1904,58 @@ CODE:
 }
 
 void
+mode (...)
+PROTOTYPE: @
+CODE:
+{
+    I32 i;
+    IV count = 0, seen_undef = 0, max = items > 0 ? 1 : 0;
+    HV *hv = newHV();
+    SV **args = &PL_stack_base[ax];
+    SV *tmp = sv_newmortal();
+
+    sv_2mortal(newRV_noinc((SV*)hv));
+
+    COUNT_ARGS_MAX
+
+    EXTEND(SP, count = 1);
+    ST(0) = sv_2mortal(newSViv(max));
+
+    /* don't build return list in scalar context */
+    if (GIMME_V == G_SCALAR)
+        XSRETURN(1);
+
+
+    hv_iterinit(hv);
+    for(;;)
+    {
+        HE *he = hv_iternext(hv);
+        SV *key, *val;
+        if(NULL == he)
+            break;
+
+        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+            continue;
+
+        i = SvIVX(val);
+        if(max == i)
+        {
+            ++count;
+            EXTEND(SP, count);
+            ST(count-1) = sv_mortalcopy(key);
+        }
+    }
+
+    if(seen_undef == max)
+    {
+        EXTEND(SP, ++count);
+        ST(count-1) = &PL_sv_undef;
+    }
+
+    XSRETURN(count);
+}
+
+void
 samples (k, ...)
   I32 k;
 PROTOTYPE: $@

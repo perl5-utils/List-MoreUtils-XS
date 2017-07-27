@@ -19,7 +19,7 @@ $VERSION = '0.420_001';
           firstidx lastidx onlyidx
           firstval lastval onlyval
           firstres lastres onlyres
-          singleton duplicates frequency occurances
+          singleton duplicates frequency occurances mode
           each_array each_arrayref
           pairwise natatime
           arrayify mesh uniq listcmp
