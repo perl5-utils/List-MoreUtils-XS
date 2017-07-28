@@ -1541,6 +1541,42 @@ CODE:
 }
 
 void
+zip6 (...)
+PROTOTYPE: \@\@;\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@
+CODE:
+{
+    int i, j, maxidx = -1;
+    AV **src;
+    New(0, src, items, AV*);
+
+    for (i = 0; i < items; i++)
+    {
+        if(!arraylike(ST(i)))
+           croak_xs_usage(cv,  "\\@\\@;\\@...");
+
+        src[i] = (AV*)SvRV(ST(i));
+        if (av_len(src[i]) > maxidx)
+            maxidx = av_len(src[i]);
+    }
+
+    EXTEND(SP, maxidx + 1);
+    for (i = 0; i <= maxidx; i++)
+    {
+        AV *av;
+        ST(i) = sv_2mortal(newRV_noinc((SV *)(av = newAV())));
+
+        for (j = 0; j < items; j++)
+        {
+            SV **svp = av_fetch(src[j], i, FALSE);
+            av_push(av, newSVsv( svp ? *svp : &PL_sv_undef ));
+        }
+    }
+
+    Safefree(src);
+    XSRETURN(maxidx + 1);
+}
+
+void
 listcmp (...)
 PROTOTYPE: \@\@;\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@\@
 CODE:
