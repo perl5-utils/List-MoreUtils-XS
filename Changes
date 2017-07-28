@@ -1,5 +1,30 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.420_001	2017-06-28
+    - fix a lot of potential memory leaks when callbacks throw exceptions
+    - add some new functions:
+      * qsort
+      * binsert
+      * bremove
+      * listcmp
+      * arrayify (RT#17230)
+      * samples (RT#77562)
+      * minmaxstr (RT#106401)
+      * lower_bound
+      * upper_bound
+      * equal_range
+      * frequencies
+      * occurances
+      * mode (RT#91991)
+      * zip6 (RT#42921)
+      * reduce_0
+      * reduce_1
+      * reduce_u
+    - improve tests
+    - make List::MoreUtils::XS independent from List::MoreUtils
+      Note that List::MoreUtils::XS doesn't guarantee API stability - this
+      feature is only provided through List::MoreUtils as frontend.
+
 0.418 2017-03-29
     - clarify license conditions
 
