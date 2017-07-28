@@ -12,6 +12,7 @@ $VERSION = '0.420_001';
 @EXPORT = ();
 @EXPORT_OK = qw(any all none notall one
           any_u all_u none_u notall_u one_u
+	  reduce_u reduce_0 reduce_1
           true false
           insert_after insert_after_string
           apply indexes

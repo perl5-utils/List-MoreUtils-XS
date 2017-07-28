@@ -326,6 +326,51 @@ in_pad (pTHX_ SV *code)
         POP_MULTICALL;                          \
     }
 
+#define REDUCE_WITH(init)                            \
+    dMULTICALL;                                      \
+    dMULTICALLSVCV;                                  \
+    SV *rc, **args = &PL_stack_base[ax];             \
+    IV i;                                            \
+                                                     \
+    if(!codelike(code))                              \
+       croak_xs_usage(cv,  "code, list, list");      \
+                                                     \
+    if (in_pad(aTHX_ code)) {                        \
+        croak("Can't use lexical $a or $b in pairwise code block"); \
+    }                                                \
+                                                     \
+    rc = (init);                      \
+    sv_2mortal(newRV_noinc(rc));                     \
+                                                     \
+    PUSH_MULTICALL(mc_cv);                           \
+    SAVESPTR(GvSV(PL_defgv));                        \
+                                                     \
+    if (!PL_firstgv || !PL_secondgv)                 \
+    {                                                \
+        SAVESPTR(PL_firstgv);                        \
+        SAVESPTR(PL_secondgv);                       \
+        PL_firstgv = gv_fetchpv("a", TRUE, SVt_PV);  \
+        PL_secondgv = gv_fetchpv("b", TRUE, SVt_PV); \
+    }                                                \
+                                                     \
+    for (i = 1; i < items; ++i)                      \
+    {                                                \
+        sv_setiv(GvSV(PL_defgv), i-1);               \
+                                                     \
+        GvSV(PL_firstgv) = rc;                       \
+        GvSV(PL_secondgv) = args[i];                 \
+        MULTICALL;                                   \
+                                                     \
+        sv_setsv(rc, *PL_stack_sp);                  \
+    }                                                \
+                                                     \
+    POP_MULTICALL;                                   \
+                                                     \
+    EXTEND(SP, 1);                                   \
+    ST(0) = sv_2mortal(newSVsv(rc));                 \
+    XSRETURN(1)
+
+
 #define COUNT_ARGS                                    \
     for (i = 0; i < items; i++) {                     \
         SvGETMAGIC(args[i]);                          \
@@ -935,6 +980,33 @@ CODE:
     XSRETURN_NO;
 #undef ON_EMPTY
 #undef ON_TRUE
+}
+
+void
+reduce_u(code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    REDUCE_WITH(newSVsv(&PL_sv_undef));
+}
+
+void
+reduce_0(code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    REDUCE_WITH(newSViv(0));
+}
+
+void
+reduce_1(code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    REDUCE_WITH(newSViv(1));
 }
 
 int
