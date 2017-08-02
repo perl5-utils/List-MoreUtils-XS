@@ -779,8 +779,8 @@ loop:
                                         \
         GvSV(PL_defgv) = at;            \
         MULTICALL;                      \
-        cmprc = 0 - SvIV(*PL_stack_sp); \
-        if (cmprc >= 0) {               \
+        cmprc = SvIV(*PL_stack_sp); \
+        if (cmprc <= 0) {               \
             first = ++it;               \
             count -= step + 1;          \
         }                               \
@@ -2525,16 +2525,16 @@ CODE:
         SAVESPTR(GvSV(PL_defgv));
 
         LOWER_BOUND(args[it])
-        lb = --first;
+        lb = first - 1;
 
-        count = items - 1, first = 1;
+        count = items - first;
         UPPER_BOUND(args[it])
 
         POP_MULTICALL;
 
         EXTEND(SP, 2);
         ST(0) = sv_2mortal(newSViv(lb));
-        ST(1) = sv_2mortal(newSViv(--first));
+        ST(1) = sv_2mortal(newSViv(first - 1));
         XSRETURN(2);
     }
 
