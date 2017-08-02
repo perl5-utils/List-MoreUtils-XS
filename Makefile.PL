@@ -67,6 +67,7 @@ my %CONFIGURE_DEPS = (
 my %BUILD_DEPS = ();
 
 my %TEST_DEPS = (
+    'Storable'   => 0,
     'Test::More' => 0.96,
 );
 my @XS_FILES = qw(XS.xs);
@@ -121,7 +122,6 @@ WriteMakefile1(
                     'Test::Pod::Coverage'                 => 0,
                     'Test::Pod::Spelling::CommonMistakes' => 0,
                     'Test::Spelling'                      => 0,
-                    'JSON::PP'                            => 0,
                     'Test::WriteVariants'                 => '0.013',
                     %BUNDLE_CONFIGURE_DEPS,
                 },
