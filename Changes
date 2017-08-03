@@ -1,5 +1,11 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.420_002	2017-08-03
+    - improve configure toolchain to use Config::AutoConf 0.315
+    - speed up some inner loops by hinting the expected result
+    - fix mind screwed up issue in upper_bound and reduce elements
+      visited in equal_range
+
 0.420_001	2017-06-28
     - fix a lot of potential memory leaks when callbacks throw exceptions
     - add some new functions:
