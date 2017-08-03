@@ -146,7 +146,7 @@ WriteMakefile1(
         'Adam Kennedy <adamk@cpan.org>',
         'Jens Rehsack <rehsack@cpan.org>'
     ],
-    LICENSE            => 'perl',
+    LICENSE            => 'apache_2_0',
     CONFIGURE_REQUIRES => \%CONFIGURE_DEPS,
     PREREQ_PM          => \%RUN_DEPS,
     BUILD_REQUIRES     => \%BUILD_DEPS,
