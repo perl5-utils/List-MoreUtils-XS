@@ -88,6 +88,18 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #ifndef MUTABLE_GV
 # define MUTABLE_GV(a) (GV *)(a)
 #endif
+
+#if !defined(HAS_BUILTIN_EXPECT) && defined(HAVE_BUILTIN_EXPECT)
+# ifdef LIKELY
+#  undef LIKELY
+# endif
+# ifdef UNLIKELY
+#  undef UNLIKELY
+# endif
+# define LIKELY(x) __builtin_expect(!!(x), 1)
+# define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#endif
+
 #ifndef LIKELY
 # define LIKELY(x) (x)
 #endif
@@ -258,7 +270,7 @@ in_pad (pTHX_ SV *code)
         args->curidx = 0;                                                               \
                                                                                         \
         for (i = 0; i < items; i++) {                                                   \
-            if(!arraylike(ST(i)))                                                       \
+            if(UNLIKELY(!arraylike(ST(i))))                                             \
                croak_xs_usage(cv,  "\\@;\\@\\@...");                                    \
             args->avs[i] = (AV*)SvRV(ST(i));                                            \
             SvREFCNT_inc(args->avs[i]);                                                 \
@@ -393,28 +405,32 @@ in_pad (pTHX_ SV *code)
         }                                             \
     }
 
-#define COUNT_ARGS_MAX                                \
-    for (i = 0; i < items; i++) {                     \
-        SvGETMAGIC(args[i]);                          \
-        if(SvOK(args[i])) {                           \
-            HE *he;                                   \
-            SvSetSV_nosteal(tmp, args[i]);            \
-            he = hv_fetch_ent(hv, tmp, 0, 0);         \
-            if (NULL == he) {                         \
-                args[count++] = args[i];              \
-                hv_store_ent(hv, tmp, newSViv(1), 0); \
-            }                                         \
-            else {                                    \
-                SV *v = HeVAL(he);                    \
-                IV how_many = SvIVX(v);               \
-                if(max < ++how_many) max = how_many;  \
-                sv_setiv(v, how_many);                \
-            }                                         \
-        }                                             \
-        else if(0 == seen_undef++) {                  \
-            args[count++] = args[i];                  \
-        }                                             \
-    }
+#define COUNT_ARGS_MAX                                    \
+    do {                                                  \
+	for (i = 0; i < items; i++) {                     \
+	    SvGETMAGIC(args[i]);                          \
+	    if(SvOK(args[i])) {                           \
+		HE *he;                                   \
+		SvSetSV_nosteal(tmp, args[i]);            \
+		he = hv_fetch_ent(hv, tmp, 0, 0);         \
+		if (NULL == he) {                         \
+		    args[count++] = args[i];              \
+		    hv_store_ent(hv, tmp, newSViv(1), 0); \
+		}                                         \
+		else {                                    \
+		    SV *v = HeVAL(he);                    \
+		    IV how_many = SvIVX(v);               \
+		    if(UNLIKELY(max < ++how_many))        \
+			max = how_many;                   \
+		    sv_setiv(v, how_many);                \
+		}                                         \
+	    }                                             \
+	    else if(0 == seen_undef++) {                  \
+		args[count++] = args[i];                  \
+	    }                                             \
+	}                                                 \
+	if(UNLIKELY(max < seen_undef)) max = seen_undef;  \
+    } while(0)
 
 
 /* #include "dhash.h" */
@@ -1657,17 +1673,19 @@ CODE:
     SV *tmp = sv_newmortal();
     HV *rc = newHV();
     SV *ret = sv_2mortal (newRV_noinc((SV *)rc));
+    HV *distinct = newHV();
+    sv_2mortal(newRV_noinc((SV*)distinct));
 
     for (i = 0; i < items; i++)
     {
         AV *av;
         I32 j;
-        HV *distinct = newHV();
-        sv_2mortal(newRV_noinc((SV*)distinct));
 
         if(!arraylike(ST(i)))
            croak_xs_usage(cv,  "\\@\\@;\\@...");
         av = (AV*)SvRV(ST(i));
+
+	hv_clear(distinct);
 
         for(j = 0; j <= av_len(av); ++j)
         {
@@ -1714,7 +1732,7 @@ CODE:
         if(NULL == he)
             break;
 
-        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+        if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
             continue;
 
         ST(i++) = key;
@@ -1928,7 +1946,7 @@ CODE:
         if(NULL == he)
             break;
 
-        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+        if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
             continue;
 
         ST(i++) = key;
@@ -1957,7 +1975,7 @@ CODE:
 
     sv_2mortal(newRV_noinc((SV*)hv));
 
-    COUNT_ARGS_MAX
+    COUNT_ARGS_MAX;
 
     /* don't build return list in scalar context */
     if (GIMME_V == G_SCALAR)
@@ -1979,7 +1997,7 @@ CODE:
         if(NULL == he)
             break;
 
-        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+        if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
             continue;
 
         i = SvIVX(val);
@@ -2024,7 +2042,7 @@ CODE:
 
     sv_2mortal(newRV_noinc((SV*)hv));
 
-    COUNT_ARGS_MAX
+    COUNT_ARGS_MAX;
 
     EXTEND(SP, count = 1);
     ST(0) = sv_2mortal(newSViv(max));
@@ -2042,7 +2060,7 @@ CODE:
         if(NULL == he)
             break;
 
-        if(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) ))
+        if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
             continue;
 
         i = SvIVX(val);
