@@ -433,8 +433,6 @@ in_pad (pTHX_ SV *code)
     } while(0)
 
 
-/* #include "dhash.h" */
-
 /* need this one for array_each() */
 typedef struct
 {
@@ -2299,77 +2297,6 @@ CODE:
 
     XSRETURN(i);
 }
-
-#if 0
-void
-part_dhash (code, ...)
-    SV *code;
-PROTOTYPE: &@
-CODE:
-{
-    /* We might want to keep this dhash-implementation.
-     * It is currently slower than the above but it uses less
-     * memory for sparse parts such as
-     *   @part = part { 10_000_000 } 1 .. 100_000;
-     * Maybe there's a way to optimize dhash.h to get more speed
-     * from it.
-     */
-    dMULTICALL;
-    int i, j, lastidx = -1;
-    int max;
-    HV *stash;
-    GV *gv;
-    I32 gimme = G_SCALAR;
-    I32 count = 0;
-    SV **args = &PL_stack_base[ax];
-    CV *cv;
-
-    dhash_t *h = dhash_init();
-
-    if(!codelike(code))
-       croak_xs_usage(cv,  "code, ...");
-
-    if (items == 1)
-        XSRETURN_EMPTY;
-
-    cv = sv_2cv(code, &stash, &gv, 0);
-    PUSH_MULTICALL(cv);
-    SAVESPTR(GvSV(PL_defgv));
-
-    for(i = 1 ; i < items ; ++i) {
-        int idx;
-        GvSV(PL_defgv) = args[i];
-        MULTICALL;
-        idx = SvIV(*PL_stack_sp);
-
-        if (idx < 0 && (idx += h->max) < 0)
-            croak("Modification of non-creatable array value attempted, subscript %i", idx);
-
-        dhash_store(h, idx, args[i]);
-    }
-    POP_MULTICALL;
-
-    dhash_sort_final(h);
-
-    EXTEND(SP, max = h->max+1);
-    i = 0;
-    lastidx = -1;
-    while (i < h->count) {
-        int retidx = h->ary[i].key;
-        int fill = retidx - lastidx - 1;
-        for (j = 0; j < fill; j++) {
-            ST(retidx - j - 1) = &PL_sv_undef;
-        }
-        ST(retidx) = newRV_noinc((SV*)h->ary[i].val);
-        i++;
-        lastidx = retidx;
-    }
-
-    dhash_destroy(h);
-    XSRETURN(max);
-}
-
-#endif
 
 void
 bsearch (code, ...)
