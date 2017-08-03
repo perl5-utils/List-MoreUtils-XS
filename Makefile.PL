@@ -30,9 +30,7 @@ use ExtUtils::MakeMaker;
 use inc::Config::AutoConf::LMU ();
 
 inc::Config::AutoConf::LMU->_set_argv(@ARGV);    # XXX hack because we cannot construct for global use
-inc::Config::AutoConf::LMU->check_produce_loadable_xs_build() or die "Can't produce loadable XS module";
-inc::Config::AutoConf::LMU->check_all_headers(qw(time.h sys/time.h));
-inc::Config::AutoConf::LMU->check_funcs([qw(time)]);
+inc::Config::AutoConf::LMU->check_lmu_prerequisites();
 inc::Config::AutoConf::LMU->write_config_h("LMUconfig.h");
 
 if (-d "Sandbox")
@@ -52,7 +50,7 @@ my %RUN_DEPS = (
 );
 my %BUNDLE_CONFIGURE_DEPS = (
     'inc::latest'      => '0.500',
-    'Config::AutoConf' => '0.308',
+    'Config::AutoConf' => '0.315',
 );
 my %CONFIGURE_DEPS = (
     'Carp'                => 0,
