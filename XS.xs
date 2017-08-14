@@ -20,17 +20,27 @@
  * Perl 5 you may have available.
  */
 
-#define NEED_gv_fetchpvn_flags
-#define PERL_NO_GET_CONTEXT
+#include "LMUconfig.h"
 
+#ifdef HAVE_TIME_H
+# include <time.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+
+#define PERL_NO_GET_CONTEXT
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
 #include "multicall.h"
 
+#define NEED_gv_fetchpvn_flags
 #include "ppport.h"
 
-#include "LMUconfig.h"
+#ifndef MAX
+# define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
 
 #ifndef aTHX
 #  define aTHX
@@ -740,13 +750,6 @@ loop:
         }
     }
 }
-
-#ifdef HAVE_TIME_H
-# include <time.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>
-#endif
 
 /* lower_bound algorithm from STL - see http://en.cppreference.com/w/cpp/algorithm/lower_bound */
 #define LOWER_BOUND(at)               \
