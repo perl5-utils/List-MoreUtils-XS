@@ -1,5 +1,9 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.421	2017-08-14
+    - correct license in META thanks to Chase Whitener (RT#122702)
+    - fix issues with -DPERL_IMPLICIT_SYS on Windows with Strawberry-Perl
+
 0.420_002	2017-08-03
     - improve configure toolchain to use Config::AutoConf 0.315
     - speed up some inner loops by hinting the expected result
