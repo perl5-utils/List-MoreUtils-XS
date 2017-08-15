@@ -154,7 +154,7 @@ WriteMakefile1(
     XS                 => {map { (my $tgt = $_) =~ s/\.xs$/\.c/; $_ => $tgt; } @XS_FILES},
     MAGICXS            => 1,
     INC                => "-I.",
-    (-d "Sandbox" ? (realclean => {FILES => "inc/latest* inc/inc_* t/xs"}) : ()),
+    (-d "Sandbox" ? (realclean => {FILES => "inc/latest* inc/inc_* t/xs config.log LMUconfig.h M*.bak"}) : ()),
     depend => {'$(FIRST_MAKEFILE)' => '$(VERSION_FROM)'},
     test   => {TESTS               => join(' ', 't/*.t', 't/xs/*.t', 'xt/*.t')},
     # Otherwise 'cxinc' isn't defined
