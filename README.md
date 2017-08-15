@@ -23,8 +23,15 @@ List::MoreUtils::XS - Provide compiled List::MoreUtils functions
     my $i = firstidx { $_ eq 'yeah' } @foo;
     # on sorted - always first, but might not be 'yeah'
     my $j = lower_bound { $_ cmp 'yeah' } @bar;
-    # on sorted - any of occurances, is surely 'yeah'
+    # on sorted - any of occurrences, is surely 'yeah'
     my $k = bsearchidx { $_ cmp 'yeah' } @bar;
+
+# DESCRIPTION
+
+List::MoreUtils::XS is a backend for List::MoreUtils. Even if it's possible
+(because of user wishes) to have it practically independent from
+[List::MoreUtils](https://metacpan.org/pod/List::MoreUtils), it technically depend on `List::MoreUtils`. Since it's
+only a backend, the API is not public and can change without any warning.
 
 # SEE ALSO
 
