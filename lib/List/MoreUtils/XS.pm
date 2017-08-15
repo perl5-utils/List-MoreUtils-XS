@@ -69,6 +69,13 @@ List::MoreUtils::XS - Provide compiled List::MoreUtils functions
   # on sorted - any of occurrences, is surely 'yeah'
   my $k = bsearchidx { $_ cmp 'yeah' } @bar;
 
+=head1 DESCRIPTION
+
+List::MoreUtils::XS is a backend for List::MoreUtils. Even if it's possible
+(because of user wishes) to have it practically independent from
+L<List::MoreUtils>, it technically depend on C<List::MoreUtils>. Since it's
+only a backend, the API is not public and can change without any warning.
+
 =head1 SEE ALSO
 
 L<List::Util>, L<List::AllUtils>
