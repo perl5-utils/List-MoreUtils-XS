@@ -20,7 +20,7 @@ $VERSION = '0.421';
           firstidx lastidx onlyidx
           firstval lastval onlyval
           firstres lastres onlyres
-          singleton duplicates frequency occurances mode
+          singleton duplicates frequency occurrences mode
           each_array each_arrayref
           pairwise natatime
           arrayify mesh zip6 uniq listcmp
@@ -66,7 +66,7 @@ List::MoreUtils::XS - Provide compiled List::MoreUtils functions
   my $i = firstidx { $_ eq 'yeah' } @foo;
   # on sorted - always first, but might not be 'yeah'
   my $j = lower_bound { $_ cmp 'yeah' } @bar;
-  # on sorted - any of occurances, is surely 'yeah'
+  # on sorted - any of occurrences, is surely 'yeah'
   my $k = bsearchidx { $_ cmp 'yeah' } @bar;
 
 =head1 SEE ALSO

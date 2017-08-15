@@ -1964,7 +1964,7 @@ CODE:
 }
 
 void
-occurances (...)
+occurrences (...)
 PROTOTYPE: @
 CODE:
 {
