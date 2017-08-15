@@ -1,5 +1,11 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.422	2017-08-15
+    - Rename 'occurances' into 'occurrences' as requested in RT#122806 by
+      Paul Howarth as a slightly late side-note in RT#91991.
+    - Add DESCRIPTION to Pod clarifying the role of List::MoreUtils::XS
+    - improve Makefile.PL regarding some build artifacts
+
 0.421	2017-08-14
     - correct license in META thanks to Chase Whitener (RT#122702)
     - fix issues with -DPERL_IMPLICIT_SYS on Windows with Strawberry-Perl
