@@ -2502,7 +2502,12 @@ CODE:
 
     RETVAL = -1;
 
-    if (AvFILLp(list) > 0)
+    if (AvFILLp(list) == -1)
+    {
+	av_push(list, newSVsv(item));
+	RETVAL = 0;
+    }
+    else if (AvFILLp(list) >= 0)
     {
         dMULTICALL;
         dMULTICALLSVCV;
@@ -2535,7 +2540,7 @@ CODE:
     if(!codelike(code))
        croak_xs_usage(cv,  "code, ...");
 
-    if (AvFILLp(list) > 0)
+    if (AvFILLp(list) >= 0)
     {
         dMULTICALL;
         dMULTICALLSVCV;
