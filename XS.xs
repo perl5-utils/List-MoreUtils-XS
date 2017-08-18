@@ -2119,7 +2119,7 @@ CODE:
     I32 i;
 
     if( k > (items - 1) )
-        croak("Cannot get %d samples from %d elements", k, items-1);
+        croak(aTHX_ "Cannot get %" IVdf " samples from %" IVdf " elements", (IV)k, (IV)(items-1));
 
     /* Initialize Drand01 unless rand() or srand() has already been called */
     if(!PL_srand_called)
