@@ -646,12 +646,23 @@ swapfunc(SV **a, SV **b, size_t n)
 #define vecswap(a, b, n)  \
     if ((n) > 0) swapfunc(a, b, n)
 
-#define CMP(x, y) ({ \
+#if HAVE_FEATURE_STATEMENT_EXPRESSION
+# define CMP(x, y) ({ \
         GvSV(PL_firstgv) = *(x); \
         GvSV(PL_secondgv) = *(y); \
         MULTICALL; \
         SvIV(*PL_stack_sp); \
     })
+#else
+static inline int _cmpsvs(pTHX_ SV *x, SV *y, OP *multicall_cop )
+{
+    GvSV(PL_firstgv) = x;
+    GvSV(PL_secondgv) = y;
+    MULTICALL;
+    return SvIV(*PL_stack_sp);
+}
+# define CMP(x, y) _cmpsvs(aTHX_ *(x), *(y), multicall_cop)
+#endif
 
 #define MED3(a, b, c) ( \
     CMP(a, b) < 0 ? \
