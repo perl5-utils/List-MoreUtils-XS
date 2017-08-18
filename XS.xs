@@ -41,6 +41,9 @@
 #ifndef MAX
 # define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
+#ifndef MIN
+# define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
 
 #ifndef aTHX
 #  define aTHX
@@ -615,10 +618,6 @@ LMUav2flat(pTHX_ AV *tgt, AV *args)
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#ifndef MIN
-# define        MIN(a,b) (((a)<(b))?(a):(b))
-#endif
 
 /*
  * FreeBSD's Qsort routine from Bentley & McIlroy's "Engineering a Sort Function".
