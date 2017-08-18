@@ -15,6 +15,14 @@ sub check_lmu_prerequisites
     $self->check_all_headers(qw(time.h sys/time.h));
     $self->check_funcs([qw(time)]);
 
+    unless($self->check_types([qw(size_t ssize_t)]))
+    {
+        $self->check_sizeof_types(["int", "long", "long long", "ptr"], {
+            prologue => $self->_default_includes . <<EOPTR
+typedef void * ptr;
+EOPTR
+        });
+    }
     $self->check_builtin("expect");
 }
 

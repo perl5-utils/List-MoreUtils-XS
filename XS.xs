@@ -120,6 +120,35 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 # define GV_NOTQUAL 0
 #endif
 
+#ifdef _MSC_VER
+# define inline __inline
+#endif
+
+#ifndef HAVE_SIZE_T
+# if SIZEOF_PTR == SIZEOF_LONG_LONG
+typedef unsigned long long size_t;
+# elif SIZEOF_PTR == SIZEOF_LONG
+typedef unsigned long size_t;
+# elif SIZEOF_PTR == SIZEOF_INT
+typedef unsigned int size_t;
+# else
+#  error "Can't determine type for size_t"
+# endif
+#endif
+
+#ifndef HAVE_SSIZE_T
+# if SIZEOF_PTR == SIZEOF_LONG_LONG
+typedef signed long long ssize_t;
+# elif SIZEOF_PTR == SIZEOF_LONG
+typedef signed long ssize_t;
+# elif SIZEOF_PTR == SIZEOF_INT
+typedef signed int ssize_t;
+# else
+#  error "Can't determine type for ssize_t"
+# endif
+#endif
+
+
 /* compare left and right SVs. Returns:
  * -1: <
  *  0: ==
