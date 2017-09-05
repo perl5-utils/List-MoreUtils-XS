@@ -2310,7 +2310,7 @@ CODE:
         idx = SvIV(*PL_stack_sp);
 
         if (UNLIKELY(idx < 0 && (idx += (AvFILLp(tmp)+1)) < 0))
-            croak("Modification of non-creatable array value attempted, subscript %ld", idx);
+            croak("Modification of non-creatable array value attempted, subscript %" IVdf, idx);
 
         if(UNLIKELY(NULL == (inner = av_fetch(tmp, idx, FALSE))))
         {
