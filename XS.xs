@@ -90,7 +90,7 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 /*
  * Perl < 5.18 had some kind of different SvIV_please_nomg
  */
-#if PERL_VERSION < 18
+#if PERL_VERSION_LE(5,18,0)
 #undef SvIV_please_nomg
 #  define SvIV_please_nomg(sv) \
         (!SvIOKp(sv) && (SvNOK(sv) || SvPOK(sv)) \
