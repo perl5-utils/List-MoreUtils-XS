@@ -233,7 +233,7 @@ LMUncmp(pTHX_ SV* left, SV * right)
 #ifndef PadARRAY
 typedef AV PADNAMELIST;
 typedef SV PADNAME;
-# if PERL_VERSION < 8 || (PERL_VERSION == 8 && !PERL_SUBVERSION)
+# if PERL_VERSION_LE(5,8,0)
 typedef AV PADLIST;
 typedef AV PAD;
 # endif
@@ -247,12 +247,6 @@ typedef AV PAD;
 # define PadnameOURSTASH(pn)    SvOURSTASH(pn)
 # define PadnameOUTER(pn)       !!SvFAKE(pn)
 # define PadnamePV(pn)          (SvPOKp(pn) ? SvPVX(pn) : NULL)
-#endif
-#ifndef PadnameSV
-# define PadnameSV(pn)          pn
-#endif
-#ifndef PadnameFLAGS
-# define PadnameFLAGS(pn)       (SvFLAGS(PadnameSV(pn)))
 #endif
 
 static int 
@@ -279,8 +273,10 @@ in_pad (pTHX_ SV *code)
                     continue;
 #               endif
 
-                if (!(PadnameFLAGS(name_sv)) & SVf_OK)
+#if PERL_VERSION_LT(5,21,7)
+		if (!SvOK(name_sv))
                     continue;
+#endif
 
                 if (strEQ(name_str, "$a") || strEQ(name_str, "$b"))
                     return 1;
