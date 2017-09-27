@@ -2114,7 +2114,8 @@ CODE:
 
     if(seen_undef == max)
     {
-        EXTEND(SP, ++count);
+	++count;
+        EXTEND(SP, count);
         ST(count-1) = &PL_sv_undef;
     }
 
