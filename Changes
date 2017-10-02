@@ -1,5 +1,8 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.426	2017-10-02
+    - release 0.425_001 as 0.426
+
 0.425_001	2017-09-27
     - Fix broken format in part (fixes issues/4, thanks Andreas Schwab
       for reporting and testing the fix)
