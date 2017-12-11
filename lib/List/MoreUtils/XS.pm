@@ -15,7 +15,7 @@ $VERSION = '0.428';
   reduce_u reduce_0 reduce_1
   true false
   insert_after insert_after_string
-  apply indexes
+  apply indexes slide
   after after_incl before before_incl
   firstidx lastidx onlyidx
   firstval lastval onlyval

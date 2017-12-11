@@ -510,6 +510,16 @@ typedef struct
     int natatime;
 } natatime_args;
 
+/* used for slideatatime_args */
+typedef struct
+{
+    SV **svs;
+    int nsvs;
+    int curidx;
+    int window;
+    int move;
+} slideatatime_args;
+
 static void
 insert_after (pTHX_ int idx, SV *what, AV *av)
 {
@@ -922,6 +932,27 @@ CODE:
     }
 }
 
+MODULE = List::MoreUtils::XS_sa             PACKAGE = List::MoreUtils::XS_sa
+
+void
+DESTROY(sv)
+SV *sv;
+CODE:
+{
+    int i;
+    CV *code = (CV*)SvRV(sv);
+    slideatatime_args *args = (slideatatime_args *)(CvXSUBANY(code).any_ptr);
+    if (args)
+    {
+        for (i = 0; i < args->nsvs; ++i)
+            SvREFCNT_dec(args->svs[i]);
+
+        Safefree(args->svs);
+        Safefree(args);
+        CvXSUBANY(code).any_ptr = NULL;
+    }
+}
+
 MODULE = List::MoreUtils::XS            PACKAGE = List::MoreUtils::XS
 
 void
@@ -1098,6 +1129,136 @@ CODE:
 {
     REDUCE_WITH(newSViv(1));
 }
+
+void
+slide(code, ...)
+    SV *code;
+PROTOTYPE: &@
+CODE:
+{
+    if ((items <= 2) || (!codelike(code)))
+       croak_xs_usage(cv,  "code, item1, item2, ...");
+    else {
+        /* keep original stack a bit smaller ... */
+        dMULTICALL;
+        dMULTICALLSVCV;
+        ssize_t i;
+        SV **args = &PL_stack_base[ax];
+        AV *rc = newAV();
+
+        sv_2mortal(newRV_noinc((SV*)rc));
+        av_extend(rc, items-2);
+
+        PUSH_MULTICALL(mc_cv);
+
+        SAVEGENERICSV(PL_firstgv);
+        SAVEGENERICSV(PL_secondgv);
+        PL_firstgv = MUTABLE_GV(SvREFCNT_inc(
+            gv_fetchpvs("a", GV_ADD|GV_NOTQUAL, SVt_PV)
+        ));
+        PL_secondgv = MUTABLE_GV(SvREFCNT_inc(
+            gv_fetchpvs("b", GV_ADD|GV_NOTQUAL, SVt_PV)
+        ));
+        /* make sure the GP isn't removed out from under us for
+         * the SAVESPTR() */
+        save_gp(PL_firstgv, 0);
+        save_gp(PL_secondgv, 0);
+        /* we don't want modifications localized */
+        GvINTRO_off(PL_firstgv);
+        GvINTRO_off(PL_secondgv);
+        SAVEGENERICSV(GvSV(PL_firstgv));
+        SvREFCNT_inc(GvSV(PL_firstgv));
+        SAVEGENERICSV(GvSV(PL_secondgv));
+        SvREFCNT_inc(GvSV(PL_secondgv));
+
+        for(i = 1 ; i < items - 1; ++i) {
+            SV *olda, *oldb;
+
+            olda = GvSV(PL_firstgv);
+            oldb = GvSV(PL_secondgv);
+            GvSV(PL_firstgv) = SvREFCNT_inc_simple_NN(args[i]);
+            GvSV(PL_secondgv) = SvREFCNT_inc_simple_NN(args[i+1]);
+            SvREFCNT_dec(olda);
+            SvREFCNT_dec(oldb);
+            MULTICALL;
+            av_push(rc, newSVsv(*PL_stack_sp));
+        }
+        POP_MULTICALL;
+
+        for(i = av_len(rc); i >= 0; --i)
+        {
+            ST(i) = sv_2mortal(AvARRAY(rc)[i]);
+            AvARRAY(rc)[i] = NULL;
+        }
+
+        AvFILLp(rc) = -1;
+    }
+
+    XSRETURN(items-2);
+}
+
+void
+_slideatatime_iterator ()
+PROTOTYPE:
+CODE:
+{
+    int i;
+
+    /* 'cv' is the hidden argument with which XS_List__MoreUtils__XS__slideatatime_iterator (this XSUB)
+     * is called. The closure_arg struct is stored in this CV. */
+
+    slideatatime_args *args = (slideatatime_args*)CvXSUBANY(cv).any_ptr;
+
+    EXTEND(SP, args->window);
+
+    for (i = 0; i < args->window; i++)
+        if ((args->curidx + i) < args->nsvs)
+            ST(i) = sv_2mortal(newSVsv(args->svs[args->curidx + i]));
+        else
+            break;
+
+    args->curidx += args->move;
+
+    XSRETURN(i);
+}
+
+SV *
+slideatatime (move, window, ...)
+int move;
+int window;
+PROTOTYPE: $@
+CODE:
+{
+    int i;
+    slideatatime_args *args;
+    HV *stash = gv_stashpv("List::MoreUtils::XS_sa", TRUE);
+
+    CV *closure = newXS(NULL, XS_List__MoreUtils__XS__slideatatime_iterator, __FILE__);
+
+    /* must NOT set prototype on iterator:
+     * otherwise one cannot write: &$it */
+    /* !! sv_setpv((SV*)closure, ""); !! */
+
+    New(0, args, 1, slideatatime_args);
+    New(0, args->svs, items-2, SV*);
+    args->nsvs   = items-2;
+    args->curidx = 0;
+    args->move   = move;
+    args->window = window;
+
+    for (i = 2; i < items; i++)
+        SvREFCNT_inc(args->svs[i-2] = ST(i));
+
+    CvXSUBANY(closure).any_ptr = args;
+    RETVAL = newRV_noinc((SV*)closure);
+
+    /* in order to allow proper cleanup in DESTROY-handler */
+    sv_bless(RETVAL, stash);
+}
+OUTPUT:
+    RETVAL
+
+
 
 int
 true (code, ...)
@@ -1612,23 +1773,22 @@ _natatime_iterator ()
 PROTOTYPE:
 CODE:
 {
-    int i, nret;
+    int i;
 
     /* 'cv' is the hidden argument with which XS_List__MoreUtils__array_iterator (this XSUB)
      * is called. The closure_arg struct is stored in this CV. */
 
     natatime_args *args = (natatime_args*)CvXSUBANY(cv).any_ptr;
-    nret = args->natatime;
 
-    EXTEND(SP, nret);
+    EXTEND(SP, args->natatime);
 
     for (i = 0; i < args->natatime; i++)
         if (args->curidx < args->nsvs)
             ST(i) = sv_2mortal(newSVsv(args->svs[args->curidx++]));
         else
-            XSRETURN(i);
+            break;
 
-    XSRETURN(nret);
+    XSRETURN(i);
 }
 
 SV *
