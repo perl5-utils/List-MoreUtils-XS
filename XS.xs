@@ -1621,7 +1621,9 @@ CODE:
 
     LMUav2flat(aTHX_ rc, args);
 
-    for(i = AvFILLp(rc); i >= 0; --i)
+    i = AvFILLp(rc);
+    EXTEND(SP, i+1);
+    for(; i >= 0; --i)
     {
         ST(i) = sv_2mortal(AvARRAY(rc)[i]);
         AvARRAY(rc)[i] = NULL;
