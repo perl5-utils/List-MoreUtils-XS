@@ -3,6 +3,7 @@ install:
   - cpanm --notest --with-recommends --with-suggests Test::WriteVariants Config::AutoConf Carp inc::latest JSON::PP
   - perl Makefile.PL
   - make manifest
+  - cpanm --notest List::MoreUtils
   - cpanm --notest --with-recommends --with-suggests --with-develop --installdeps .
 language: perl
 perl:
