@@ -1,7 +1,7 @@
 Revision history for Perl extension List-MoreUtils-XS
 
 0.427_001   2017-12-12
-    - Fix RT#123631 - build fails on perl >=5.27.4 with -DDEBUGGING,
+    - Fix RT#123613 - build fails on perl >=5.27.4 with -DDEBUGGING,
       thanks for reporting and the suggested patch goes to Andreas
       Koenig and Tony Cook
 
