@@ -389,29 +389,47 @@ in_pad (pTHX_ SV *code)
         croak("Can't use lexical $a or $b in pairwise code block"); \
     }                                                \
                                                      \
-    rc = (init);                      \
+    rc = (init);                                     \
     sv_2mortal(newRV_noinc(rc));                     \
                                                      \
     PUSH_MULTICALL(mc_cv);                           \
     SAVESPTR(GvSV(PL_defgv));                        \
                                                      \
-    if (!PL_firstgv || !PL_secondgv)                 \
-    {                                                \
-        SAVESPTR(PL_firstgv);                        \
-        SAVESPTR(PL_secondgv);                       \
-        PL_firstgv = gv_fetchpv("a", TRUE, SVt_PV);  \
-        PL_secondgv = gv_fetchpv("b", TRUE, SVt_PV); \
-    }                                                \
+    /* Following code is stolen on request of */     \
+    /* Zefram from pp_sort.c of perl core 16ada23 */ \
+    /* I have no idea why it's necessary and there */\
+    /* is no reasonable documentation regarding */   \
+    /* deal with localized $a/$b/$_ */               \
+    SAVEGENERICSV(PL_firstgv);                       \
+    SAVEGENERICSV(PL_secondgv);                      \
+    PL_firstgv = MUTABLE_GV(SvREFCNT_inc(            \
+        gv_fetchpvs("a", GV_ADD|GV_NOTQUAL, SVt_PV)  \
+    ));                                              \
+    PL_secondgv = MUTABLE_GV(SvREFCNT_inc(           \
+        gv_fetchpvs("b", GV_ADD|GV_NOTQUAL, SVt_PV)  \
+    ));                                              \
+    save_gp(PL_firstgv, 0); save_gp(PL_secondgv, 0); \
+    GvINTRO_off(PL_firstgv);                         \
+    GvINTRO_off(PL_secondgv);                        \
+    SAVEGENERICSV(GvSV(PL_firstgv));                 \
+    SvREFCNT_inc(GvSV(PL_firstgv));                  \
+    SAVEGENERICSV(GvSV(PL_secondgv));                \
+    SvREFCNT_inc(GvSV(PL_secondgv));                 \
                                                      \
     for (i = 1; i < items; ++i)                      \
     {                                                \
+        SV *olda, *oldb;                             \
         sv_setiv(GvSV(PL_defgv), i-1);               \
                                                      \
-        GvSV(PL_firstgv) = rc;                       \
-        GvSV(PL_secondgv) = args[i];                 \
+        olda = GvSV(PL_firstgv);                     \
+        oldb = GvSV(PL_secondgv);                    \
+        GvSV(PL_firstgv) = SvREFCNT_inc_simple_NN(rc); \
+        GvSV(PL_secondgv) = SvREFCNT_inc_simple_NN(args[i]); \
+        SvREFCNT_dec(olda);                          \
+        SvREFCNT_dec(oldb);                          \
         MULTICALL;                                   \
                                                      \
-        sv_setsv(rc, *PL_stack_sp);                  \
+        SvSetMagicSV(rc, *PL_stack_sp);              \
     }                                                \
                                                      \
     POP_MULTICALL;                                   \
