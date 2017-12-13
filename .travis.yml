@@ -1,4 +1,6 @@
 ---
+env:
+  - PERL_USE_UNSAFE_INC=0
 install:
   - cpanm --notest --with-recommends --with-suggests Test::WriteVariants Config::AutoConf Carp inc::latest JSON::PP
   - perl Makefile.PL
