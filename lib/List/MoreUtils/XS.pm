@@ -7,7 +7,7 @@ use base ('Exporter');
 
 use vars qw{$VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS};
 
-$VERSION = '0.427_002';
+$VERSION = '0.428';
 
 @EXPORT    = ();
 @EXPORT_OK = qw(any all none notall one
