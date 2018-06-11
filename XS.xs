@@ -501,16 +501,7 @@ typedef struct
     int curidx;     /* the current index of the iterator */
 } arrayeach_args;
 
-/* used for natatime */
-typedef struct
-{
-    SV **svs;
-    int nsvs;
-    int curidx;
-    int natatime;
-} natatime_args;
-
-/* used for slideatatime_args */
+/* used for natatime and slideatatime_args */
 typedef struct
 {
     SV **svs;
@@ -905,28 +896,6 @@ CODE:
             SvREFCNT_dec(args->avs[i]);
 
         Safefree(args->avs);
-        Safefree(args);
-        CvXSUBANY(code).any_ptr = NULL;
-    }
-}
-
-
-MODULE = List::MoreUtils::XS_na             PACKAGE = List::MoreUtils::XS_na
-
-void
-DESTROY(sv)
-SV *sv;
-CODE:
-{
-    int i;
-    CV *code = (CV*)SvRV(sv);
-    natatime_args *args = (natatime_args *)(CvXSUBANY(code).any_ptr);
-    if (args)
-    {
-        for (i = 0; i < args->nsvs; ++i)
-            SvREFCNT_dec(args->svs[i]);
-
-        Safefree(args->svs);
         Safefree(args);
         CvXSUBANY(code).any_ptr = NULL;
     }
@@ -1768,29 +1737,6 @@ PPCODE:
     XSRETURN(i);
 }
 
-void
-_natatime_iterator ()
-PROTOTYPE:
-CODE:
-{
-    int i;
-
-    /* 'cv' is the hidden argument with which XS_List__MoreUtils__array_iterator (this XSUB)
-     * is called. The closure_arg struct is stored in this CV. */
-
-    natatime_args *args = (natatime_args*)CvXSUBANY(cv).any_ptr;
-
-    EXTEND(SP, args->natatime);
-
-    for (i = 0; i < args->natatime; i++)
-        if (args->curidx < args->nsvs)
-            ST(i) = sv_2mortal(newSVsv(args->svs[args->curidx++]));
-        else
-            break;
-
-    XSRETURN(i);
-}
-
 SV *
 natatime (n, ...)
 int n;
@@ -1798,20 +1744,21 @@ PROTOTYPE: $@
 CODE:
 {
     int i;
-    natatime_args *args;
-    HV *stash = gv_stashpv("List::MoreUtils::XS_na", TRUE);
+    slideatatime_args *args;
+    HV *stash = gv_stashpv("List::MoreUtils::XS_sa", TRUE);
 
-    CV *closure = newXS(NULL, XS_List__MoreUtils__XS__natatime_iterator, __FILE__);
+    CV *closure = newXS(NULL, XS_List__MoreUtils__XS__slideatatime_iterator, __FILE__);
 
     /* must NOT set prototype on iterator:
      * otherwise one cannot write: &$it */
     /* !! sv_setpv((SV*)closure, ""); !! */
 
-    New(0, args, 1, natatime_args);
+    New(0, args, 1, slideatatime_args);
     New(0, args->svs, items-1, SV*);
     args->nsvs = items-1;
     args->curidx = 0;
-    args->natatime = n;
+    args->move   = n;
+    args->window = n;
 
     for (i = 1; i < items; i++)
         SvREFCNT_inc(args->svs[i-1] = ST(i));

@@ -22,7 +22,7 @@ $VERSION = '0.428';
   firstres lastres onlyres
   singleton duplicates frequency occurrences mode
   each_array each_arrayref
-  pairwise natatime
+  pairwise natatime slideatatime
   arrayify mesh zip6 uniq listcmp
   samples minmax minmaxstr part
   bsearch bsearchidx binsert bremove lower_bound upper_bound equal_range
