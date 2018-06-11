@@ -662,16 +662,29 @@ swapfunc(SV **a, SV **b, size_t n)
 
 #if HAVE_FEATURE_STATEMENT_EXPRESSION
 # define CMP(x, y) ({ \
-        GvSV(PL_firstgv) = *(x); \
-        GvSV(PL_secondgv) = *(y); \
-        MULTICALL; \
-        SvIV(*PL_stack_sp); \
+        SV *olda, *oldb;                             \
+        olda = GvSV(PL_firstgv);                     \
+        oldb = GvSV(PL_secondgv);                    \
+        GvSV(PL_firstgv) = SvREFCNT_inc_simple_NN(*(x)); \
+        GvSV(PL_secondgv) = SvREFCNT_inc_simple_NN(*(y)); \
+        SvREFCNT_dec(olda);                          \
+        SvREFCNT_dec(oldb);                          \
+                                                     \
+        MULTICALL;                                   \
+        SvIV(*PL_stack_sp);                          \
     })
 #else
 static inline int _cmpsvs(pTHX_ SV *x, SV *y, OP *multicall_cop )
 {
-    GvSV(PL_firstgv) = x;
-    GvSV(PL_secondgv) = y;
+    SV *olda, *oldb;
+
+    olda = GvSV(PL_firstgv);
+    oldb = GvSV(PL_secondgv);
+    GvSV(PL_firstgv) = SvREFCNT_inc_simple_NN(x);
+    GvSV(PL_secondgv) = SvREFCNT_inc_simple_NN(y);
+    SvREFCNT_dec(olda);
+    SvREFCNT_dec(oldb);
+
     MULTICALL;
     return SvIV(*PL_stack_sp);
 }
@@ -1531,21 +1544,38 @@ PPCODE:
     gimme = G_ARRAY;
     PUSH_MULTICALL(mc_cv);
 
-    if (!PL_firstgv || !PL_secondgv)
-    {
-        SAVESPTR(PL_firstgv);
-        SAVESPTR(PL_secondgv);
-        PL_firstgv = gv_fetchpv("a", TRUE, SVt_PV);
-        PL_secondgv = gv_fetchpv("b", TRUE, SVt_PV);
-    }
+    SAVEGENERICSV(PL_firstgv);
+    SAVEGENERICSV(PL_secondgv);
+    PL_firstgv = MUTABLE_GV(SvREFCNT_inc(
+        gv_fetchpvs("a", GV_ADD|GV_NOTQUAL, SVt_PV)
+    ));
+    PL_secondgv = MUTABLE_GV(SvREFCNT_inc(
+        gv_fetchpvs("b", GV_ADD|GV_NOTQUAL, SVt_PV)
+    ));
+    /* make sure the GP isn't removed out from under us for
+     * the SAVESPTR() */
+    save_gp(PL_firstgv, 0);
+    save_gp(PL_secondgv, 0);
+    /* we don't want modifications localized */
+    GvINTRO_off(PL_firstgv);
+    GvINTRO_off(PL_secondgv);
+    SAVEGENERICSV(GvSV(PL_firstgv));
+    SvREFCNT_inc(GvSV(PL_firstgv));
+    SAVEGENERICSV(GvSV(PL_secondgv));
+    SvREFCNT_inc(GvSV(PL_secondgv));
 
     for (i = 0; i < maxitems; ++i)
     {
         SV **j;
+        SV *olda = GvSV(PL_firstgv), *oldb = GvSV(PL_secondgv);
+
         SV **svp = av_fetch(list1, i, FALSE);
-        GvSV(PL_firstgv) = svp ? *svp : &PL_sv_undef;
+        GvSV(PL_firstgv) = SvREFCNT_inc_simple_NN(svp ? *svp : &PL_sv_undef);
         svp = av_fetch(list2, i, FALSE);
-        GvSV(PL_secondgv) = svp ? *svp : &PL_sv_undef;
+        GvSV(PL_secondgv) = SvREFCNT_inc_simple_NN(svp ? *svp : &PL_sv_undef);
+        SvREFCNT_dec(olda);
+        SvREFCNT_dec(oldb);
+
         MULTICALL;
 
         for (j = PL_stack_base+1; j <= PL_stack_sp; ++j)
@@ -2694,8 +2724,10 @@ CODE:
         /* we don't want modifications localized */
         GvINTRO_off(PL_firstgv);
         GvINTRO_off(PL_secondgv);
-        SAVESPTR(GvSV(PL_firstgv));
-        SAVESPTR(GvSV(PL_secondgv));
+        SAVEGENERICSV(GvSV(PL_firstgv));
+        SvREFCNT_inc(GvSV(PL_firstgv));
+        SAVEGENERICSV(GvSV(PL_secondgv));
+        SvREFCNT_inc(GvSV(PL_secondgv));
 
         bsd_qsort_r(aTHX_ AvARRAY(list), av_len(list) + 1, multicall_cop);
         POP_MULTICALL;
