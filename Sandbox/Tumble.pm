@@ -16,7 +16,7 @@ sub tumble
     my ($class, $output_dir) = @_;
 
     my $template_dir = Cwd::abs_path(File::Spec->catdir($FindBin::RealBin, "t", "inline"));
-    my $test_writer = Test::WriteVariants->new();
+    my $test_writer  = Test::WriteVariants->new();
     $test_writer->allow_dir_overwrite(1);
     $test_writer->allow_file_overwrite(1);
 
