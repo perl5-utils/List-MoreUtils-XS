@@ -47,8 +47,8 @@ List::MoreUtils::XS - Provide compiled List::MoreUtils functions
 
 =head1 SYNOPSIS
 
-  use List::Moreutils::XS ();
-  use List::MoreUtils ':all';
+  use List::MoreUtils::XS (); # doesn't export anything
+  use List::MoreUtils ':all'; # required to import functions
 
   my @procs = get_process_stats->fetchall_array;
   # sort by ppid, then pid
