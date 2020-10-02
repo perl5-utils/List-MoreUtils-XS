@@ -87,6 +87,10 @@ S_croak_xs_usage(pTHX_ const CV *const cv, const char *const params)
 #  define slu_sv_value(sv) (SvIOK(sv)) ? (NV)(SvIVX(sv)) : (SvNV(sv))
 #endif
 
+#ifndef SvTEMP_off
+#  define SvTEMP_off(a) (a)
+#endif
+
 /*
  * Perl < 5.18 had some kind of different SvIV_please_nomg
  */
@@ -343,8 +347,10 @@ in_pad (pTHX_ SV *code)
         SAVESPTR(GvSV(PL_defgv));                 \
                                                   \
         for(i = 1 ; i < items ; ++i) {            \
+            SV *def_sv;                           \
             ASSERT_PL_defgv                       \
-            sv_setsv_mg(GvSV(PL_defgv), args[i]); \
+            def_sv = GvSV(PL_defgv) = args[i];    \
+            SvTEMP_off(def_sv);                   \
             MULTICALL;                            \
             on_item;                              \
         }                                         \
@@ -372,8 +378,10 @@ in_pad (pTHX_ SV *code)
         SAVESPTR(GvSV(PL_defgv));                 \
                                                   \
         for(i = items-1; i > 0; --i) {            \
+            SV *def_sv;                           \
             ASSERT_PL_defgv                       \
-            sv_setsv_mg(GvSV(PL_defgv), args[i]); \
+            def_sv = GvSV(PL_defgv) = args[i];    \
+            SvTEMP_off(def_sv);                   \
             MULTICALL;                            \
             on_item;                              \
         }                                         \
@@ -829,7 +837,7 @@ loop:
         ssize_t it = first + step;        \
                                           \
         ASSERT_PL_defgv                   \
-        sv_setsv_mg(GvSV(PL_defgv), at);  \
+        GvSV(PL_defgv) = at;     \
         MULTICALL;                        \
         cmprc = SvIV(*PL_stack_sp);       \
         if (cmprc < 0) {                  \
@@ -846,7 +854,7 @@ loop:
         ssize_t it = first + step;        \
                                           \
         ASSERT_PL_defgv                   \
-        sv_setsv_mg(GvSV(PL_defgv), at);  \
+        GvSV(PL_defgv) = at;     \
         MULTICALL;                        \
         cmprc = SvIV(*PL_stack_sp);       \
         if(UNLIKELY(0 == cmprc)) {        \
@@ -868,7 +876,7 @@ loop:
         ssize_t it = first + step;        \
                                           \
         ASSERT_PL_defgv                   \
-        sv_setsv_mg(GvSV(PL_defgv), at);  \
+        GvSV(PL_defgv) = at;     \
         MULTICALL;                        \
         cmprc = SvIV(*PL_stack_sp);       \
         if (cmprc <= 0) {                 \
@@ -1395,7 +1403,7 @@ CODE:
     for (i = 0; i <= len ; ++i)
     {
         ASSERT_PL_defgv
-        sv_setsv_mg(GvSV(PL_defgv), *av_fetch(av, i, FALSE));
+        GvSV(PL_defgv) = *av_fetch(av, i, FALSE);
         MULTICALL;
         if (SvTRUE(*PL_stack_sp))
         {
@@ -2468,7 +2476,7 @@ CODE:
         AV *av;
 
         ASSERT_PL_defgv
-        sv_setsv_mg(GvSV(PL_defgv), args[i]);
+        GvSV(PL_defgv) = args[i];
         MULTICALL;
         idx = SvIV(*PL_stack_sp);
 
@@ -2529,7 +2537,7 @@ CODE:
         if(cmprc < 0 && first < items)
         {
             ASSERT_PL_defgv
-            sv_setsv_mg(GvSV(PL_defgv), args[first]);
+            GvSV(PL_defgv) = args[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
         }
@@ -2577,7 +2585,7 @@ CODE:
         if(cmprc < 0 && first < items)
         {
             ASSERT_PL_defgv
-            sv_setsv_mg(GvSV(PL_defgv), args[first]);
+            GvSV(PL_defgv) = args[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
         }
@@ -2760,7 +2768,7 @@ CODE:
         if(cmprc < 0 && first < items)
         {
             ASSERT_PL_defgv
-            sv_setsv_mg(GvSV(PL_defgv), btree[first]);
+            GvSV(PL_defgv) = btree[first];
             MULTICALL;
             cmprc = SvIV(*PL_stack_sp);
         }
