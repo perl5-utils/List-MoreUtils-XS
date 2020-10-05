@@ -1,5 +1,9 @@
 Revision history for Perl extension List-MoreUtils-XS
 
+0.429_002	2020-10-05
+    - fix parts of RT#132043: listcmp misbehave in XS implementation
+      (thanks to Henrik Pauli for reporting)
+
 0.429_001	2020-10-02
     - fix parts of RT#123989: more $a/$b/$_ refcounting bugs
       since some bugs are simply reported wrong, dealing with them breaks
