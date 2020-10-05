@@ -1930,25 +1930,33 @@ CODE:
     }
 
     i = HvUSEDKEYS(rc);
-    EXTEND(SP, i * 2);
-
-    i = 0;
-    hv_iterinit(rc);
-    for(;;)
+    if (GIMME_V == G_SCALAR)
     {
-        HE *he = hv_iternext(rc);
-        SV *key, *val;
-        if(NULL == he)
-            break;
-
-        if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
-            continue;
-
-        ST(i++) = key;
-        ST(i++) = val;
+        ST(0) = sv_2mortal(newSVuv(i));
+        XSRETURN(1);
     }
+    else
+    {
+        EXTEND(SP, i * 2);
 
-    XSRETURN(i);
+        i = 0;
+        hv_iterinit(rc);
+        for(;;)
+        {
+            HE *he = hv_iternext(rc);
+            SV *key, *val;
+            if(NULL == he)
+                break;
+
+            if(UNLIKELY(( NULL == (key = HeSVKEY_force(he)) ) || ( NULL == (val = HeVAL(he)) )))
+                continue;
+
+            ST(i++) = key;
+            ST(i++) = val;
+        }
+
+        XSRETURN(i);
+    }
 }
 
 void
